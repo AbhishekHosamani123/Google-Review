@@ -5,17 +5,17 @@ import { withQrNumbers, qrLinkUrl } from "@/lib/qr";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isDemoMode, getDemoQrs } from "@/lib/demo";
 
-// Renders the REAL printed card (card.png in the project root) with the
+// Renders the REAL printed card (new-card.png in the project root) with the
 // numbered QR code composited into the "SCAN FOR REVIEW" area.
 //   /api/card/image?qr=1&size=1254  -> full card, QR1 embedded
 // The QR encodes the permanent link  <SITE_URL>/r/QR<n>  — shop is resolved
 // live at scan time, so cards can be re-targeted to any shop later.
-const CARD_PATH = path.join(process.cwd(), "card.png");
+const CARD_PATH = path.join(process.cwd(), "new-card.png");
 
-// placement measured on the 1254x1254 card (bottom-left QR area)
+// placement measured on the 1254x1254 card (bottom-left QR frame)
 const CARD_W = 1254;
-const PATCH = { x: 127, y: 748, w: 354, h: 334 }; // white cover over the sample QR
-const QR_SIDE = 316; // new QR square inside the patch
+const PATCH = { x: 110, y: 675, w: 382, h: 355 }; // white cover over the sample QR (inside the white frame)
+const QR_SIDE = 300; // new QR square inside the patch
 
 async function resolveQrUrl(ref) {
   const n = parseInt(String(ref || ""), 10);
