@@ -93,7 +93,9 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
 
   function onNameChange(v) {
     setName(v);
-    if (!editing || !shop.slug) setSlug(slugify(v));
+    // fresh listings (not set up yet) keep the slug tracking the name; real
+    // shops keep their slug stable after creation
+    if (!editing || !shop.slug || !shop.google_review_url) setSlug(slugify(v));
   }
 
   function applySuggestion(label) {

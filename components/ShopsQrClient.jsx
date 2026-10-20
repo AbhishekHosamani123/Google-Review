@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { qrLinkUrl, withQrNumbers, newCode } from "@/lib/qr";
@@ -14,11 +13,17 @@ function withNumbers(list) {
     .map((q, i) => ({ ...q, qrNum: i + 1 }));
 }
 
+const PLACEHOLDER_FALLBACK = {
+  description: "To be set up",
+  category: "Other",
+  keywords: [],
+  google_review_url: "",
+};
+
 export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, demo }) {
   const router = useRouter();
   const [shops, setShops] = useState(initialShops || []);
   const [qrs, setQrs] = useState(initialQrs || []);
-  const [filter, setFilter] = useState("all");
   const [openId, setOpenId] = useState(null);
   const [busy, setBusy] = useState(null);
   const [copied, setCopied] = useState(null);
@@ -31,14 +36,15 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
 
   const numbered = withQrNumbers(qrs);
   const total = qrs.length;
-  const filtered = numbered.filter((q) => {
-    if (filter === "assigned") return !!q.shop_id;
-    if (filter === "unassigned") return !q.shop_id;
-    return true;
-  });
   const openQr = numbered.find((q) => q.id === openId) || null;
-  const openShop = openQr ? shops.find((s) => s.id === openQr.shop_id) : null;
-  const noQrShops = shops.filter((s) => !qrs.some((q) => q.shop_id === s.id));
+  const openShop = openQr ? shops.find((s) => s.id === openQr.shop_id) || null : null;
+  const isUntouched = openQr && (!openShop || !openShop.google_review_url);
+
+  // lock page scroll while the fullscreen editor is open
+  useEffect(() => {
+    document.body.style.overflow = openId ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [openId]);
 
   function flashCopied(key) {
     setCopied(key);
@@ -46,7 +52,8 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
   }
 
   function handleSaved() {
-    setSavedMsg("Saved! The shop and every linked QR are up to date.");
+    setOpenId(null);
+    setSavedMsg("Saved! Your QR card is up to date.");
     setTimeout(() => setSavedMsg(""), 3000);
     if (!demo) router.refresh();
   }
@@ -67,20 +74,6 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
     flashCopied(key);
   }
 
-  async function assign(qrId, shopId) {
-    if (demo) {
-      setQrs((prev) => prev.map((q) => (q.id === qrId ? { ...q, shop_id: shopId || null } : q)));
-      return;
-    }
-    setBusy(qrId);
-    setErr("");
-    const supabase = createClient();
-    const { error } = await supabase.from("qr_codes").update({ shop_id: shopId || null }).eq("id", qrId);
-    if (error) setErr(error.message);
-    else setQrs((prev) => prev.map((q) => (q.id === qrId ? { ...q, shop_id: shopId || null } : q)));
-    setBusy(null);
-  }
-
   async function toggleActive(qr) {
     if (demo) {
       setQrs((p) => p.map((x) => (x.id === qr.id ? { ...x, is_active: !x.is_active } : x)));
@@ -95,35 +88,43 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
     setBusy(null);
   }
 
+  // Generate a brand-new unique QR: creates its own fresh listing (edit it
+  // right away) and opens the fullscreen setup for that card automatically.
   async function generateOne() {
     setBusy("new");
     setErr("");
     const code = newCode(8);
     if (demo) {
-      setQrs((p) => [...p, { id: `qr-${Date.now()}`, code, shop_id: null, label: "Generated", type: "qr", scans_count: 0, is_active: true, created_at: new Date().toISOString() }]);
+      const local = [{ id: `qr-${Date.now()}`, code, shop_id: `shop-${Date.now()}`, label: "Generated", type: "qr", scans_count: 0, is_active: true, created_at: new Date().toISOString() }];
+      setShops((p) => [...p, { id: `shop-${Date.now()}`, name: "Untitled listing", slug: `listing-${code}`, google_review_url: "" }]);
+      setQrs((p) => [...p, ...local]);
+      setOpenId(local[0].id);
       setBusy(null);
       return;
     }
-    const supabase = createClient();
-    const { data, error } = await supabase.from("qr_codes").insert({ code, label: "Generated", type: "qr" }).select("*").single();
-    if (error) setErr(error.message);
-    else setQrs((p) => [...p, data]);
-    setBusy(null);
-  }
-
-  async function generateForShop(shopId) {
-    setBusy(`shop-${shopId}`);
-    setErr("");
-    const code = newCode(8);
-    if (demo) {
-      setQrs((p) => [...p, { id: `qr-${Date.now()}`, code, shop_id: shopId, label: "Generated", type: "qr", scans_count: 0, is_active: true, created_at: new Date().toISOString() }]);
-      setBusy(null);
-      return;
+    try {
+      const supabase = createClient();
+      const shopPayload = {
+        name: "Untitled listing",
+        slug: `listing-${code.toLowerCase()}`,
+        ...PLACEHOLDER_FALLBACK,
+      };
+      // some columns reject db-level NULLs — the fallback values above keep the
+      // insert valid; the editor overwrites them on the first real save
+      let newShop, shErr;
+      ({ data: newShop, error: shErr } = await supabase.from("shops").insert(shopPayload).select("*").single());
+      if (shErr) setErr(shErr.message);
+      const { data, error } = await supabase.from("qr_codes").insert({ code, label: "Generated", type: "qr", shop_id: newShop.id }).select("*").single();
+      if (error) setErr(error.message);
+      else {
+        setShops((p) => [...p, newShop]);
+        setQrs((p) => [...p, data]);
+        setOpenId(data.id);
+        if (!demo) router.refresh();
+      }
+    } catch (e3) {
+      setErr(String(e3?.message || e3));
     }
-    const supabase = createClient();
-    const { data, error } = await supabase.from("qr_codes").insert({ code, label: "Generated", type: "qr", shop_id: shopId }).select("*").single();
-    if (error) setErr(error.message);
-    else setQrs((p) => [...p, data]);
     setBusy(null);
   }
 
@@ -133,65 +134,24 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-textPrimary">Shops{demo && <span className="ml-2 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800">DEMO</span>}</h1>
-          <p className="mt-1 text-sm text-textSecondary">Click a Shop name to open its review page in a new tab. Click a QR number or Edit to see the full printed card, copy the NFC URL, and download for the vendor. Scans count unique users (one per device per shop, remembered in the visitor&apos;s own browser).</p>
+          <h1 className="font-display text-2xl font-bold tracking-tight text-textPrimary">QR Cards{demo && <span className="ml-2 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800">DEMO</span>}</h1>
+          <p className="mt-1 text-sm text-textSecondary">Each row is one physical card. Generate a unique QR, tap Edit to set up the shop details, then print — the card works first, the destination can change any time without reprinting. Scans count unique devices per shop.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/shops/new" className="rounded-full bg-textPrimary px-5 py-2.5 text-sm font-bold text-white hover:opacity-90">
-            + New shop
-          </Link>
           <button
             onClick={generateOne}
             disabled={busy === "new"}
             className="rounded-full bg-googleBlue px-5 py-2.5 text-sm font-bold text-white hover:bg-[#3367D6] disabled:opacity-50"
           >
-            + Generate QR{busy === "new" ? "..." : ""}
+            {busy === "new" ? "Generating..." : "+ Generate QR code"}
           </button>
         </div>
       </div>
 
       {err && <p className="mt-3 rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-googleRed">{err}</p>}
-      {demo && <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">Demo mode — assignments and new QRs are local only. Connect Supabase to persist.</p>}
+      {demo && <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">Demo mode — new QRs are local only. Connect Supabase to persist.</p>}
 
-      {noQrShops.length > 0 && (
-        <div className="mt-4 rounded-card border border-dashed border-amber-300 bg-amber-50 p-4">
-          <p className="text-xs font-bold text-amber-800">Shops with no linked QR yet</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {noQrShops.map((s) => (
-              <span key={s.id} className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-textPrimary">
-                {s.name}
-                <button
-                  onClick={() => generateForShop(s.id)}
-                  disabled={busy === `shop-${s.id}`}
-                  className="rounded-full bg-googleBlue px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#3367D6] disabled:opacity-50"
-                >
-                  {busy === `shop-${s.id}` ? "..." : "+ QR"}
-                </button>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-1 rounded-full border border-cardBorder bg-white p-1 text-xs font-semibold">
-          {[
-            ["all", `All (${total})`],
-            ["assigned", `Assigned (${qrs.filter((q) => q.shop_id).length})`],
-            ["unassigned", `Unassigned (${qrs.filter((q) => !q.shop_id).length})`],
-          ].map(([k, label]) => (
-            <button
-              key={k}
-              onClick={() => setFilter(k)}
-              className={["rounded-full px-3 py-1.5", filter === k ? "bg-textPrimary text-white" : "text-textSecondary hover:text-textPrimary"].join(" ")}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-4 overflow-hidden rounded-card border border-cardBorder bg-white">
+      <div className="mt-5 overflow-hidden rounded-card border border-cardBorder bg-white">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-cardBorder bg-surface text-xs font-semibold text-textSecondary">
@@ -204,12 +164,10 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
               </tr>
             </thead>
             <tbody className="divide-y divide-cardBorder">
-              {filtered.map((q) => {
+              {numbered.map((q) => {
                 const shop = shops.find((s) => s.id === q.shop_id);
-                const row = [
-                  "px-4 py-3 whitespace-nowrap",
-                  q.is_active ? "" : "opacity-50",
-                ].join(" ");
+                const notSetUp = shop && !shop.google_review_url;
+                const row = ["px-4 py-3 whitespace-nowrap", q.is_active ? "" : "opacity-50"].join(" ");
                 return (
                   <tr key={q.id} className="hover:bg-surface/50">
                     <td className={row}>
@@ -218,15 +176,20 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                         <span className="block font-mono text-[11px] text-textSecondary">{q.code}</span>
                       </button>
                     </td>
-                    <td className={`${row} max-w-[220px]`}>
-                      {shop ? (
+                    <td className={`${row} max-w-[240px]`}>
+                      {notSetUp ? (
+                        <button onClick={() => setOpenId(q.id)} className="text-left">
+                          <span className="block font-semibold text-textSecondary">Not set up yet</span>
+                          <span className="block text-xs text-textSecondary/80 hover:text-googleBlue">{qrLinkUrl(q).replace(/^https?:\/\//, "")} — tap Edit</span>
+                        </button>
+                      ) : shop ? (
                         <a href={qrLinkUrl(q)} target="_blank" rel="noopener noreferrer" title="Open review page in a new tab">
                           <span className="block font-semibold text-textPrimary hover:text-googleBlue truncate">{shop.name}</span>
                           <span className="block text-xs text-textSecondary truncate">{qrLinkUrl(q).replace(/^https?:\/\//, "")}</span>
                         </a>
                       ) : (
                         <button onClick={() => setOpenId(q.id)} className="text-left text-xs text-textSecondary hover:text-textPrimary">
-                          — unassigned · {qrLinkUrl(q).replace(/^https?:\/\//, "")}
+                          — no listing · tap Edit
                         </button>
                       )}
                     </td>
@@ -237,14 +200,13 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={[
-                          "inline-flex rounded-full px-2 py-1 text-xs font-semibold",
-                          q.is_active ? "bg-green-50 text-green-700 border border-green-200" : "bg-zinc-100 text-zinc-500 border border-zinc-200",
-                        ].join(" ")}
-                      >
-                        {q.is_active ? "Active" : "Inactive"}
-                      </span>
+                      {notSetUp ? (
+                        <span className="inline-flex rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 text-xs font-semibold">Setup needed</span>
+                      ) : (
+                        <span className={["inline-flex rounded-full px-2 py-1 text-xs font-semibold", q.is_active ? "bg-green-50 text-green-700 border border-green-200" : "bg-zinc-100 text-zinc-500 border border-zinc-200"].join(" ")}>
+                          {q.is_active ? "Active" : "Inactive"}
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <button
@@ -260,43 +222,41 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && <p className="py-10 text-center text-sm text-textSecondary">No QR cards in this filter. Use “+ Generate QR” above.</p>}
+        {numbered.length === 0 && <p className="py-10 text-center text-sm text-textSecondary">No QR cards yet. Use “+ Generate QR code” above.</p>}
       </div>
 
       <p className="mt-4 text-xs text-textSecondary/70">
-        Every card prints with its own QR: <b>/r/QR1</b> on card QR1, <b>/r/QR2</b> on card QR2, and so on — print first, link to a shop later, and change the shop any time without reprinting. Old-style links remain valid forever.
+        Every card prints with its own QR: <b>/r/QR1</b> on card QR1, <b>/r/QR2</b> on card QR2, and so on — print first, set up the shop later, and change the destination any time without reprinting. Old-style links remain valid forever.
       </p>
 
-      {/* ---------- Edit / detail modal ---------- */}
+      {/* ---------- Fullscreen editor ---------- */}
       {openQr && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" onClick={() => setOpenId(null)}>
-          <div
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-card border border-cardBorder bg-white p-6 shadow-raised"
-            onClick={(e) => e.stopPropagation()}
-            style={{ animation: "fadeUp 200ms ease-out" }}
-          >
-            <div className="flex items-start justify-between">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-surface" style={{ animation: "fadeUp 200ms ease-out" }}>
+          <div className="sticky top-0 z-10 border-b border-cardBorder bg-white/95 backdrop-blur px-4 py-3 sm:px-6">
+            <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
               <div>
                 <p className="text-lg font-bold tracking-tight text-textPrimary">
                   QR{openQr.qrNum} <span className="ml-1 font-mono text-sm font-semibold text-textSecondary">{openQr.code}</span>
                 </p>
                 <p className="text-xs text-textSecondary">
-                  {openQr.label || "—"} · {openQr.type.toUpperCase()} · {openQr.scans_count || 0} scans
+                  {openQr.label || "—"} · {openQr.type.toUpperCase()} · {openQr.scans_count || 0} scans{isUntouched ? " · set up below, then Save" : ""}
                 </p>
               </div>
-              <button onClick={() => setOpenId(null)} className="rounded-full border border-cardBorder bg-white px-3 py-1.5 text-xs font-semibold text-textSecondary hover:bg-surface">
-                Close ✕
+              <button onClick={() => setOpenId(null)} className="rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface">
+                Back to dashboard
               </button>
             </div>
+          </div>
 
-            <div className="mt-5 grid gap-6 sm:grid-cols-[210px,1fr]">
+          <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+            <div className="grid gap-6 lg:grid-cols-[280px,1fr]">
               <div>
                 <img
                   src={`/api/card/image?qr=${openQr.qrNum}&size=640`}
                   alt={`QR${openQr.qrNum} printed card`}
-                  width={210}
-                  height={210}
-                  className="w-[210px] rounded-xl border border-cardBorder bg-white shadow-sm"
+                  width={280}
+                  height={280}
+                  className="w-[280px] rounded-xl border border-cardBorder bg-white shadow-sm"
                 />
                 <a
                   href={`/api/card/image?qr=${openQr.qrNum}&size=1254`}
@@ -313,17 +273,32 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                 >
                   QR code only (PNG)
                 </a>
-              </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => toggleActive(openQr)}
+                    disabled={busy === openQr.id}
+                    className="flex-1 rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface"
+                  >
+                    {openQr.is_active ? "Deactivate card" : "Activate card"}
+                  </button>
+                  <a
+                    href={`/r/${openQr.code}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface text-center"
+                  >
+                    Open page ↗
+                  </a>
+                </div>
 
-              <div className="space-y-4">
-                <div className="rounded-xl border border-googleBlue/30 bg-chipSelected p-3">
-                  <p className="text-[11px] font-bold text-googleBlue">NFC chip & QR link — copy this URL onto the NFC chip placed at the shop</p>
+                <div className="mt-3 rounded-xl border border-googleBlue/30 bg-white p-3">
+                  <p className="text-[11px] font-bold text-googleBlue">NFC chip &amp; QR link — copy this URL onto the NFC chip placed at the shop</p>
                   <div className="mt-2 flex gap-2">
                     <input
                       readOnly
                       value={nfcUrl}
                       onFocus={(e) => e.target.select()}
-                      className="w-full rounded-xl border border-cardBorder bg-white px-3 py-2 text-xs font-mono text-textPrimary focus:outline-none"
+                      className="w-full min-w-0 rounded-xl border border-cardBorder bg-surface px-3 py-2 text-xs font-mono text-textPrimary focus:outline-none"
                     />
                     <button
                       onClick={() => copyText(nfcUrl, `nfc-${openQr.id}`)}
@@ -332,77 +307,20 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                       {copied === `nfc-${openQr.id}` ? "Copied!" : "Copy URL"}
                     </button>
                   </div>
-                  {!openShop && (
-                    <p className="mt-1.5 text-[11px] text-amber-700">
-                      This card is not linked to a shop yet — assign one in the dropdown below. The printed QR and this URL never change, so you can print cards first and link shops later (even change shops any time).
-                    </p>
-                  )}
-                </div>
-
-                <label className="block">
-                  <span className="text-xs font-semibold text-textPrimary">Redirects to shop</span>
-                  <select
-                    value={openQr.shop_id || ""}
-                    onChange={(e) => assign(openQr.id, e.target.value || null)}
-                    disabled={busy === openQr.id}
-                    className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3 py-2.5 text-sm focus:border-googleBlue focus:outline-none"
-                  >
-                    <option value="">— Unassigned (no destination)</option>
-                    {shops.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name} — {s.slug}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {openShop && (
-                  <div className="rounded-xl border border-cardBorder bg-surface p-3">
-                    <p className="text-[11px] font-bold text-textPrimary">{openShop.name} — Google review URL</p>
-                    <p className="mt-1 text-[11px] text-textSecondary">Full Google review URL, keywords, description and more are editable in the shop details section below.</p>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => toggleActive(openQr)}
-                    disabled={busy === openQr.id}
-                    className="rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface"
-                  >
-                    {openQr.is_active ? "Deactivate" : "Activate"}
-                  </button>
-                  <a
-                    href={`/r/${openQr.code}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface"
-                  >
-                    Open review page ↗
-                  </a>
+                  <p className="mt-1.5 text-[11px] text-textSecondary">This URL never changes — changing the shop or its Google link later does not require reprinting.</p>
                 </div>
               </div>
-            </div>
 
-            {/* ---------- Full shop editor ---------- */}
-            <div className="mt-6 border-t border-cardBorder pt-5">
-              <p className="text-sm font-bold text-textPrimary">
-                Shop details {openShop ? <span className="text-textSecondary font-semibold">— {openShop.name}</span> : ""}
-              </p>
-              {openShop ? (
-                demo ? (
-                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">
-                    Demo mode — connect your Supabase project to edit shop details here. In the live app the full editor (name, description, category, keywords, Google URL, logo...) opens in this panel.
-                  </div>
-                ) : (
-                  <div className="mt-3">
+              <div className="rounded-card border border-cardBorder bg-white p-5 sm:p-6">
+                <p className="text-sm font-bold text-textPrimary">Shop details {openShop ? <span className="text-textSecondary font-semibold">— {openShop.name}</span> : ""}</p>
+                {openShop ? (
+                  <div className="mt-4">
                     <ShopForm shop={openShop} embedded onSaved={handleSaved} />
                   </div>
-                )
-              ) : (
-                <p className="mt-2 text-xs leading-relaxed text-textSecondary">
-                  Pick a shop in <b>“Redirects to shop”</b> above — its full details (name, description, category/shop type, keywords, Google review URL, logo...) appear here for editing. To create a brand-new shop, use <b>“+ New shop”</b> at the top of the page, then select it here.
-                </p>
-              )}
+                ) : (
+                  <p className="mt-2 text-xs text-textSecondary">This card has no listing yet — save the editor above or generate a new card.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
