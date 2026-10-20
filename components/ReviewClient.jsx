@@ -271,7 +271,7 @@ export default function ReviewClient({ shop, qr }) {
           </div>
         ) : hasGenerated ? (
           <div className="mt-6" style={{ animation: "fadeUp 250ms ease-out" }}>
-            <ReviewPreview text={review} setText={setReview} onRegenerate={doGenerate} />
+            <ReviewPreview text={review} setText={setReview} onRegenerate={doGenerate} mascotSrc={mascotSrc} />
           </div>
         ) : null}
 

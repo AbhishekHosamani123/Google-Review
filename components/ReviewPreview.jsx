@@ -1,12 +1,14 @@
-export default function ReviewPreview({ text, setText, onRegenerate }) {
+import WritingMascot from "@/components/WritingMascot";
+
+export default function ReviewPreview({ text, setText, onRegenerate, mascotSrc = "/mascot.mp4" }) {
   const len = text.length;
   const tooShort = len > 0 && len < 30;
   return (
     <div className="rounded-card border border-cardBorder bg-white overflow-hidden shadow-card">
-      <div className="flex items-center justify-between border-b border-cardBorder bg-surface px-4 py-3">
-        <span className="text-sm font-semibold text-textPrimary flex items-center gap-2">
-          <span className="material-symbols-rounded" style={{ fontSize: 18 }}>rate_review</span>
-          Your review
+      <div className="flex items-center justify-between border-b border-cardBorder bg-surface px-4 py-2.5">
+        <span className="flex items-center gap-2.5">
+          <WritingMascot src={mascotSrc} size={44} />
+          <span className="text-sm font-semibold text-textPrimary">Your review</span>
         </span>
         <button
           type="button"
