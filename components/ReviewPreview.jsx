@@ -7,7 +7,7 @@ export default function ReviewPreview({ text, setText, onRegenerate, mascotSrc =
     <div className="rounded-card border border-cardBorder bg-white overflow-hidden shadow-card">
       <div className="flex items-center justify-between border-b border-cardBorder bg-[#FAFAFA]">
         <span className="px-4 py-2 text-sm font-semibold text-textPrimary">Your review</span>
-        <WritingMascot src={mascotSrc} size={64} className="shrink-0" />
+        <WritingMascot src={mascotSrc} size={80} className="shrink-0" />
       </div>
       <div className="p-4">
         <textarea
