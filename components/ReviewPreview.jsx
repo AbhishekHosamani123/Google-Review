@@ -5,19 +5,9 @@ export default function ReviewPreview({ text, setText, onRegenerate, mascotSrc =
   const tooShort = len > 0 && len < 30;
   return (
     <div className="rounded-card border border-cardBorder bg-white overflow-hidden shadow-card">
-      <div className="flex items-center justify-between border-b border-cardBorder bg-surface px-4 py-2.5">
-        <span className="flex items-center gap-2.5">
-          <WritingMascot src={mascotSrc} size={44} />
-          <span className="text-sm font-semibold text-textPrimary">Your review</span>
-        </span>
-        <button
-          type="button"
-          onClick={onRegenerate}
-          className="inline-flex items-center gap-1 rounded-full border border-cardBorder bg-white px-3 py-1.5 text-xs font-semibold text-textPrimary hover:bg-surface focus:outline-none focus-visible:ring-2 focus-visible:ring-googleBlue"
-        >
-          <span className="material-symbols-rounded" style={{ fontSize: 16 }}>refresh</span>
-          Regenerate
-        </button>
+      <div className="flex items-center justify-between border-b border-cardBorder bg-[#FAFAFA]">
+        <span className="px-4 py-2 text-sm font-semibold text-textPrimary">Your review</span>
+        <WritingMascot src={mascotSrc} size={64} className="shrink-0" />
       </div>
       <div className="p-4">
         <textarea
