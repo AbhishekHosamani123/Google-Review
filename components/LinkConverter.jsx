@@ -118,7 +118,7 @@ export default function LinkConverter() {
           <p className="mt-2 text-[11px] leading-relaxed text-textSecondary">
             {oneTap
               ? "Customers open your review box in one tap — nothing else to click."
-              : "Customers see the shop's Google profile with the Review button on it. For a one-tap dialog use the \"Ask for reviews\" link from Google Business Profile (starts with g.page/r/…/review)."}
+              : "Want the review box to open DIRECTLY? On a desktop Google Search, open the shop's profile and tap “Review” — then copy the address-bar URL (it contains #lrd=…) and paste that instead. Google only ever generates those review-dialog links from a real profile click, so it's the one URL you should save instead of the ordinary share."}
           </p>
         </div>
       )}

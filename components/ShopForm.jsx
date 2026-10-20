@@ -8,7 +8,9 @@ import { CATEGORY_OPTIONS, CATEGORY_PRESETS, moreKeywords } from "@/lib/reviews/
 // True when the URL already opens Google's write-review dialog in one tap —
 // those need no server resolution and are the ideal links.
 function isOneTapReviewUrl(url) {
-  return (url.includes("writereview") && url.includes("placeid=")) || /^https?:\/\/(www\.)?g\.page\/r\/.+\/review/.test(url);
+  return (url.includes("writereview") && url.includes("placeid="))
+    || /^https?:\/\/(www\.)?g\.page\/r\/.+\/review/.test(url)
+    || /#lrd=0x[0-9a-fA-F]+:0x[0-9a-fA-F]+/.test(url); // Google's own review-dialog share URL (copied from a listing's Review button)
 }
 
 function slugify(s) {

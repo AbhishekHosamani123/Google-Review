@@ -47,6 +47,30 @@ export async function POST(req) {
 
   const PLACEID = /placeid=(ChIJ[A-Za-z0-9_\-]+)/;
 
+  // "Review dialog" URLs — the exact format Google emits when someone clicks
+  // *Review* on a Knowledge-Panel listing and copies the address bar:
+  //   https://www.google.com/search?...&q=<name>&ludocid=<dec>&lsig=<tok>#lrd=0x<hex>:0x<hex>,3
+  // The #lrd fragment is what makes the dialog open on load, and Google
+  // computes those hex pairs itself — they cannot be synthesized, only
+  // copied. So any URL carrying them is already perfect and must be stored
+  // VERBATIM (rebuilding it would break the dialog).
+  if (/#lrd=0x[0-9a-fA-F]+:0x[0-9a-fA-F]+/.test(url)) {
+    return Response.json({
+      kind: "direct-review",
+      url,
+      name: (() => { try { return new URL(url).searchParams.get("q") || ""; } catch { return ""; } })(),
+      title: "Opens the review dialog directly — best kind of link",
+    });
+  }
+  if (/ludocid=\d+/.test(url)) {
+    return Response.json({
+      kind: "listing",
+      url,
+      name: (() => { try { return new URL(url).searchParams.get("q") || ""; } catch { return ""; } })(),
+      title: "Customers land on this shop's Google profile — the Review button is right on it",
+    });
+  }
+
   // already a 1-tap review link? no network needed
   if (/\/r\/.+\/review/.test(url) && inputHost.endsWith("g.page")) {
     return Response.json({ kind: "direct-review", url, title: "Opens the review dialog directly — best kind of link" });
