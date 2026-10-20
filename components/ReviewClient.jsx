@@ -113,9 +113,9 @@ export default function ReviewClient({ shop, qr }) {
   return (
     <div className="min-h-screen bg-surface">
       <header className="sticky top-0 z-30 border-b border-cardBorder bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[640px] items-center justify-between px-4 py-3 sm:px-6">
-          <span className="truncate text-sm font-semibold tracking-tight text-textPrimary">{shop.name}</span>
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-cardBorder bg-white px-2.5 py-1 text-xs font-medium text-textSecondary">
+        <div className="mx-auto flex max-w-[640px] items-center justify-between gap-2 px-4 py-3 sm:px-6">
+          <span className="truncate text-base font-bold tracking-tight text-textPrimary sm:text-lg">{shop.name}</span>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-cardBorder bg-white px-3 py-1.5 text-xs font-semibold text-textSecondary sm:text-sm">
             <span className="h-2 w-2 rounded-full bg-googleGreen" /> Review on Google
           </span>
         </div>
@@ -123,22 +123,22 @@ export default function ReviewClient({ shop, qr }) {
 
       <main className="mx-auto max-w-[640px] px-4 pb-28 pt-6 sm:px-6 sm:pt-8">
         <div className="overflow-hidden rounded-card border border-cardBorder bg-white shadow-raised" style={{ animation: "fadeUp 300ms ease-out" }}>
-          <div className="relative h-[190px] w-full overflow-hidden bg-surface sm:h-[220px]">
+          <div className="relative h-[230px] w-full overflow-hidden bg-surface sm:h-[260px]">
             <img src={hero} alt={shop.name} className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-              <h1 className="text-[20px] font-bold leading-none text-white drop-shadow sm:text-[22px]">{shop.name}</h1>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-bold text-textPrimary shadow-sm">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent" />
+            <div className="absolute inset-x-0 bottom-0 flex flex-col items-center px-4 pb-4 text-center sm:pb-5">
+              <h1 className="text-[28px] font-extrabold leading-tight tracking-tight text-white drop-shadow-md sm:text-[34px]">{shop.name}</h1>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-textPrimary shadow-sm">
                   4.8
-                  <span className="material-symbols-rounded" style={{ fontSize: 14, color: "#FBBC04", fontVariationSettings: "'FILL' 1" }}>
+                  <span className="material-symbols-rounded" style={{ fontSize: 18, color: "#FBBC04", fontVariationSettings: "'FILL' 1" }}>
                     star
                   </span>
                   <span className="font-normal text-textSecondary"> - Reviews on Google</span>
                 </span>
                 {(shop.city || shop.category) && (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-white/90">
-                    <span className="material-symbols-rounded" style={{ fontSize: 14 }}>
+                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-white/95 drop-shadow">
+                    <span className="material-symbols-rounded" style={{ fontSize: 16 }}>
                       location_on
                     </span>
                     {[shop.city, shop.category].filter(Boolean).join(" - ")}

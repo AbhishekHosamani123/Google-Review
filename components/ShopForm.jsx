@@ -59,6 +59,25 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
   const [suggested, setSuggested] = useState([]);
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(shop?.logo_url || "");
+  const [dragOver, setDragOver] = useState(false);
+  const [fileErr, setFileErr] = useState("");
+
+  // shared file picker for the drag-drop zone + the browse input
+  function pickFile(f) {
+    setFileErr("");
+    if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { setFileErr("Image must be 2 MB or smaller"); return; }
+    if (!["image/png", "image/jpeg", "image/webp"].includes(f.type)) { setFileErr("Only PNG, JPG or WebP images are allowed"); return; }
+    setLogoFile(f);
+    if (logoPreview && logoPreview.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
+    setLogoPreview(URL.createObjectURL(f));
+  }
+  function removePickedFile() {
+    setFileErr("");
+    setLogoFile(null);
+    if (logoPreview && logoPreview.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
+    setLogoPreview(shop?.logo_url || "");
+  }
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
   const [resolving, setResolving] = useState(false);
@@ -303,24 +322,60 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
 
       <label className="block">
         <span className="text-xs font-semibold text-textPrimary">Shop image (optional) — shown as the big photo on the customer review page</span>
-        <div className="mt-1 flex items-center gap-4">
+        <input
+          id="shop-img-input"
+          type="file"
+          accept="image/png,image/jpeg,image/webp"
+          onChange={(e) => {
+            pickFile(e.target.files?.[0] || null);
+            e.target.value = ""; // allow re-selecting the same file
+          }}
+          className="hidden"
+        />
+        <div
+          role="button"
+          tabIndex={-1}
+          onClick={() => {
+            const input = document.getElementById("shop-img-input");
+            if (input) input.click();
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            pickFile(e.dataTransfer?.files?.[0] || null);
+          }}
+          className={[
+            "mt-2 flex cursor-pointer select-none items-center gap-4 rounded-xl border-2 p-3 transition-colors",
+            dragOver ? "border-googleBlue bg-chipSelected" : "border-dashed border-cardBorder bg-surface hover:border-googleBlue/60",
+          ].join(" ")}
+        >
           {logoPreview ? (
-            <img src={logoPreview} alt="Shop image" className="h-12 w-20 rounded-xl border border-cardBorder bg-white object-cover" />
+            <img src={logoPreview} alt="Shop image" className="h-16 w-24 shrink-0 rounded-xl border border-cardBorder bg-white object-cover" />
           ) : (
-            <span className="h-12 w-20 rounded-xl border border-dashed border-cardBorder bg-surface flex items-center justify-center text-textSecondary text-[10px] text-center leading-tight">No image yet</span>
+            <span className="material-symbols-rounded shrink-0 text-googleBlue" style={{ fontSize: 34 }}>
+              add_photo_alternate
+            </span>
           )}
-          <input
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => {
-              const f = e.target.files?.[0] || null;
-              setLogoFile(f);
-              if (f) setLogoPreview(URL.createObjectURL(f));
-            }}
-            className="text-sm"
-          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-textPrimary">{dragOver ? "Drop to upload" : "Drag & drop your image here"}</p>
+            <p className="mt-0.5 text-[11px] text-textSecondary">or click to browse — PNG, JPG or WebP, up to 2 MB</p>
+          </div>
         </div>
-        <span className="text-[11px] text-textSecondary">Upload a real photo of your shop (wide picture works best). It replaces the stock background and sits behind the shop name on the review page.</span>
+        {fileErr && <p className="mt-1.5 text-[11px] font-semibold text-googleRed">{fileErr}</p>}
+        {logoFile && (
+          <button type="button" onClick={removePickedFile} className="mt-1.5 text-[11px] font-semibold text-googleRed hover:underline">
+            Remove image
+          </button>
+        )}
+        <span className="mt-1 block text-[11px] text-textSecondary">Upload a real photo of your shop (wide picture works best). It replaces the stock background and sits behind the shop name on the review page.</span>
       </label>
 
       {err && <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-googleRed">{err}</p>}
