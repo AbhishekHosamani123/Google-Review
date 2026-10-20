@@ -238,13 +238,19 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
         <div className="fixed inset-0 z-50 overflow-y-auto bg-surface" style={{ animation: "fadeUp 200ms ease-out" }}>
           <div className="sticky top-0 z-10 border-b border-cardBorder bg-white/95 backdrop-blur px-4 py-3 sm:px-6">
             <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-              <div>
-                <p className="text-lg font-bold tracking-tight text-textPrimary">
-                  QR{openQr.qrNum} <span className="ml-1 font-mono text-sm font-semibold text-textSecondary">{openQr.code}</span>
-                </p>
-                <p className="text-xs text-textSecondary">
-                  {openQr.label || "—"} · {openQr.type.toUpperCase()} · {openQr.scans_count || 0} scans{openShop ? ` · ${openShop.name}` : ""}
-                </p>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setOpenId(null)} className="inline-flex items-center gap-1.5 rounded-full border border-cardBorder bg-white px-3.5 py-2 text-xs font-bold text-textPrimary hover:bg-surface" title="Back to dashboard">
+                  <span className="material-symbols-rounded" style={{ fontSize: 18 }}>arrow_back</span>
+                  Back
+                </button>
+                <div>
+                  <p className="text-lg font-bold tracking-tight text-textPrimary">
+                    QR{openQr.qrNum} <span className="ml-1 font-mono text-sm font-semibold text-textSecondary">{openQr.code}</span>
+                  </p>
+                  <p className="text-xs text-textSecondary">
+                    {openQr.label || "—"} · {openQr.type.toUpperCase()} · {openQr.scans_count || 0} scans{openShop ? ` · ${openShop.name}` : ""}
+                  </p>
+                </div>
               </div>
               <button onClick={() => setOpenId(null)} className="rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface">
                 Back to dashboard
@@ -323,13 +329,19 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
         <div className="fixed inset-0 z-50 overflow-y-auto bg-surface" style={{ animation: "fadeUp 200ms ease-out" }}>
           <div className="sticky top-0 z-10 border-b border-cardBorder bg-white/95 backdrop-blur px-4 py-3 sm:px-6">
             <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
-              <div>
-                <p className="text-lg font-bold tracking-tight text-textPrimary">
-                  Edit QR{openQr.qrNum} <span className="ml-1 font-mono text-sm font-semibold text-textSecondary">{openQr.code}</span>
-                </p>
-                <p className="text-xs text-textSecondary">
-                  Set up the shop for this card{isUntouched ? " — fill the details, then Save" : ""}
-                </p>
+              <div className="flex items-center gap-3">
+                <button onClick={() => setOpenId(null)} className="inline-flex items-center gap-1.5 rounded-full border border-cardBorder bg-white px-3.5 py-2 text-xs font-bold text-textPrimary hover:bg-surface" title="Back to dashboard">
+                  <span className="material-symbols-rounded" style={{ fontSize: 18 }}>arrow_back</span>
+                  Back
+                </button>
+                <div>
+                  <p className="text-lg font-bold tracking-tight text-textPrimary">
+                    Edit QR{openQr.qrNum} <span className="ml-1 font-mono text-sm font-semibold text-textSecondary">{openQr.code}</span>
+                  </p>
+                  <p className="text-xs text-textSecondary">
+                    Set up the shop for this card{isUntouched ? " — fill the details, then Save" : ""}
+                  </p>
+                </div>
               </div>
               <button onClick={() => setOpenId(null)} className="rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface">
                 Back to dashboard
