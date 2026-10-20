@@ -1,5 +1,6 @@
 import { Inter, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
+import IconFontReady from "@/components/IconFontReady";
 
 // Typography system (matched to the reference site's rendering):
 //  - Inter for UI/body text
@@ -16,9 +17,12 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${bricolage.variable}`}>
       <head>
-        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..400,0..1,0" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,300..400,0..1,0&display=block" rel="stylesheet" />
       </head>
-      <body>{children}</body>
+      <body>
+        <IconFontReady />
+        {children}
+      </body>
     </html>
   );
 }
