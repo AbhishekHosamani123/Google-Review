@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LinkConverter from "@/components/LinkConverter";
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white">
@@ -45,6 +46,10 @@ export default function LandingPage() {
         <p className="mt-8 text-xs text-textSecondary/70">
           NFC: write <code className="rounded bg-surface border border-cardBorder px-1 py-0.5">/r/&lt;code&gt;</code> as URI on NTAG213 · QR: print ≥2×2 cm, H-correction · Change a shop’s Google URL anytime — every linked QR moves with it.
         </p>
+      </section>
+
+      <section className="mx-auto max-w-3xl px-6 pb-20">
+        <LinkConverter />
       </section>
     </div>
   );
