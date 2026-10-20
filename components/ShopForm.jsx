@@ -5,6 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import { isValidGoogleReviewUrl } from "@/lib/qr";
 import { CATEGORY_OPTIONS, CATEGORY_PRESETS, moreKeywords } from "@/lib/reviews/keywords";
 
+// True when the URL already opens Google's write-review dialog in one tap —
+// those need no server resolution and are the ideal links.
+function isOneTapReviewUrl(url) {
+  return (url.includes("writereview") && url.includes("placeid=")) || /^https?:\/\/(www\.)?g\.page\/r\/.+\/review/.test(url);
+}
+
 function slugify(s) {
   return s.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
 }
@@ -53,6 +59,35 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
   const [logoPreview, setLogoPreview] = useState(shop?.logo_url || "");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [resolved, setResolved] = useState(null); // { kind, title, name, url }
+
+  async function resolveGoogleUrl(raw) {
+    const value = (raw || googleUrl).trim();
+    if (!value || !isValidGoogleReviewUrl(value)) return null;
+    if (isOneTapReviewUrl(value)) {
+      setResolved({ kind: "writereview", title: "Opens the review dialog directly — best kind of link", url: value });
+      return { kind: "writereview", url: value, title: "Opens the review dialog directly — best kind of link" };
+    }
+    setResolving(true);
+    try {
+      const res = await fetch("/api/google/resolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: value }),
+      });
+      const data = await res.json();
+      const info = res.ok ? data : { kind: "fallback", url: value, title: "Could not verify server-side — saved as-is" };
+      setResolved(info);
+      return info;
+    } catch {
+      const info = { kind: "fallback", url: value, title: "Could not verify server-side — saved as-is" };
+      setResolved(info);
+      return info;
+    } finally {
+      setResolving(false);
+    }
+  }
 
   function onNameChange(v) {
     setName(v);
@@ -103,17 +138,25 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
     if (!name.trim()) { setErr("Shop name is required"); return; }
     if (!slug.trim()) { setErr("Slug is required"); return; }
     if (!googleUrl.trim() || !isValidGoogleReviewUrl(googleUrl.trim())) {
-      setErr("Google review URL must be a valid https:// Google Maps / search.google.com link");
+      setErr("Google review URL must be a valid Google link (e.g. share.google/..., g.page/r/.../review, or search.google.com writereview link)");
       return;
     }
     setLoading(true);
     try {
+      // normalize the Google link before storing: shorteners (share.google,
+      // g.page listing shares) get resolved to the concrete page customers will
+      // see; 1-tap review links pass through untouched.
+      let finalGoogleUrl = googleUrl.trim();
+      if (!isOneTapReviewUrl(finalGoogleUrl)) {
+        const info = await resolveGoogleUrl(finalGoogleUrl);
+        if (info && info.url && isValidGoogleReviewUrl(info.url)) finalGoogleUrl = info.url;
+      }
       const supabase = createClient();
       const payload = {
         name: name.trim(),
         slug: slug.trim(),
         description: description.trim() || null,
-        google_review_url: googleUrl.trim(),
+        google_review_url: finalGoogleUrl,
         google_place_id: placeId.trim() || null,
         address: address.trim() || null,
         city: city.trim() || null,
@@ -194,8 +237,22 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
 
       <label className="block">
         <span className="text-xs font-semibold text-textPrimary">Google review URL *</span>
-        <input value={googleUrl} onChange={(e) => setGoogleUrl(e.target.value)} required placeholder="https://search.google.com/local/writereview?placeid=ChIJ..." className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm font-mono text-xs focus:border-googleBlue focus:outline-none" />
-        <span className="text-[11px] text-textSecondary">Paste the review link (Place ID Finder). All linked QRs will follow this URL without reprinting.</span>
+        <input value={googleUrl} onChange={(e) => { setGoogleUrl(e.target.value); setResolved(null); }} onBlur={() => resolveGoogleUrl(googleUrl)} required placeholder="Paste your Google share link — share.google/..., g.page/r/.../review, or a writereview link" className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm font-mono text-xs focus:border-googleBlue focus:outline-none" />
+        {resolving && <span className="mt-1 block text-[11px] text-textSecondary">Checking the link…</span>}
+        {resolved && !resolving && (
+          <span className={`mt-1 block text-[11px] font-medium ${resolved.kind === "writereview" || resolved.kind === "direct-review" ? "text-green-700" : resolved.kind === "unknown" ? "text-amber-700" : "text-textSecondary"}`}>
+            {resolved.kind === "writereview" || resolved.kind === "direct-review"
+              ? `✓ ${resolved.title}`
+              : resolved.kind === "listing"
+                ? `✓ Resolved${resolved.name ? ` to: ${resolved.name}` : ""} — customers land on Google with the Review button on their profile`
+                : resolved.kind === "fallback"
+                  ? `Link saved as-is`
+                  : "Link stored as-is"}
+          </span>
+        )}
+        <span className="mt-1 block text-[11px] text-textSecondary">
+          Any Google link works: your listing "Share" link (share.google/…), the Google Business Profile → "Ask for reviews" link (g.page/r/…/review — customers land straight on the review box), or a Place ID writereview link. Linked QRs follow this URL without reprinting.
+        </span>
       </label>
 
       <label className="block">
