@@ -103,7 +103,7 @@ export default function LinkConverter() {
             <input
               id="lh-resolved-url"
               readOnly
-              value={result.url}
+              value={result.resolvedUrl || result.url}
               onFocus={(e) => e.target.select()}
               className="w-full flex-1 rounded-lg border border-cardBorder bg-surface px-3 py-2.5 font-mono text-[11px] text-textPrimary"
             />

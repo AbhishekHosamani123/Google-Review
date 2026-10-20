@@ -109,14 +109,19 @@ export async function POST(req) {
     const kg = u.searchParams.get("kgmid") || "";
     const qName = u.searchParams.get("q") || u.pathname.split("/").slice(-2)[0].replace(/\+/g, " ");
     if (isGoogle && (kg || /maps\/place\//.test(u.pathname) || u.pathname.startsWith("/search"))) {
-      // store a clean canonical URL: just the entity — kgmid + name — without
-      // all of Google's share-tracking decorations
-      const targetUrl = kg && qName
+      // Shortener inputs (share.google, goo.gl, maps.app.goo.gl) are stored
+      // VERBATIM — it's Google's canonical, app-aware link and redirects Google
+      // may improve over time keep working. Directly-pasted search URLs are
+      // stored as-is too. resolvedUrl = where the chain actually lands, shown
+      // to the admin so they can verify which shop the link targets.
+      let resolvedUrl = u.searchParams.get("kgmid") && qName
         ? `https://www.google.com/search?kgmid=${kg}&q=${encodeURIComponent(qName).replace(/%20/g, "+")}`
         : finalUrl;
+      const shortenerInput = /(^|\.)share\.google$/.test(inputHost) || (inputHost === "goo.gl" || inputHost === "maps.app.goo.gl");
       return Response.json({
         kind: "listing",
-        url: targetUrl,
+        url: shortenerInput ? url : resolvedUrl,
+        resolvedUrl,
         name: qName,
         kgmid: kg,
         title: "Customers land on this shop's Google profile — the Review button is right on it",
