@@ -1,0 +1,35 @@
+{
+  "name": "pink-verranda-review",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.48.1",
+    "nanoid": "^5.1.5",
+    "next": "^15.5.4",
+    "pg": "^8.23.1",
+    "qrcode": "^1.5.4",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "autoprefixer": "^10.6.1",
+    "oxlint": "^1.81.0",
+    "postcss": "^8.5.29",
+    "tailwindcss": "^3.4.19",
+    "vite": "^8.3.0"
+  },
+  "description": "Smart Google Review landing page for Pink Verranda — NFC/QR flow with template-based review generation"
+}
