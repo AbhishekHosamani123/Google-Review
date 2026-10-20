@@ -3,8 +3,6 @@ import { useState, useCallback, useEffect } from "react";
 import { getPresetKeywords } from "@/lib/reviews/keywords";
 import { generateReview } from "@/lib/reviews/templates";
 import { DEFAULT_HERO } from "@/lib/config";
-import PenMark from "@/components/PenMark";
-import WritingMascot from "@/components/WritingMascot";
 import { hasScanRecord, markScanRecord } from "@/lib/scanDedup";
 import StarRating from "@/components/StarRating";
 import KeywordChips from "@/components/KeywordChips";
@@ -27,7 +25,6 @@ export default function ReviewClient({ shop, qr }) {
   const [tone, setTone] = useState("friendly");
   const [selected, setSelected] = useState([]);
   const [review, setReview] = useState("");
-  const [generating, setGenerating] = useState(false);
   const [hasGenerated, setHasGenerated] = useState(false);
   const [toast, setToast] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
@@ -63,19 +60,15 @@ export default function ReviewClient({ shop, qr }) {
     }).catch(() => {});
   }, [shop?.id, qr?.id]);
 
-  const canGenerate = selected.length > 0;
-
-  const doGenerate = useCallback(() => {
+  const canGenerate = selected.length > 0;  const doGenerate = useCallback(() => {
     if (!canGenerate) return;
-    setGenerating(true);
     const chips = selected.map((id) => keywords.find((k) => k.id === id)).filter(Boolean);
     const text = generateReview({ chips, tone, stars, shopName: shop.name, shopCategory: shop.category, shopCity: shop.city, description: shop.description });
-    setTimeout(() => {
-      setReview(text);
-      setHasGenerated(true);
-      setGenerating(false);
-      setTimeout(() => document.getElementById("review-section")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
-    }, 1400); // enough time for the writing mascot to play a visible beat
+    // Direct result — no artificial writing phase; the draft card (with the
+    // mascot in its header) appears instantly.
+    setReview(text);
+    setHasGenerated(true);
+    setTimeout(() => document.getElementById("review-section")?.scrollIntoView({ behavior: "smooth", block: "center" }), 80);
   }, [canGenerate, selected, tone, stars, shop.name, shop.category, shop.city, shop.description, keywords]);
 
   const showToast = useCallback((msg) => {
@@ -198,30 +191,21 @@ export default function ReviewClient({ shop, qr }) {
           <button
             type="button"
             onClick={doGenerate}
-            disabled={!canGenerate || generating}
+            disabled={!canGenerate}
             className={[
               "inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-[15px] font-bold shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-googleBlue focus-visible:ring-offset-2",
-              canGenerate && !generating
+              canGenerate
                 ? "bg-googleBlue text-white hover:bg-[#3367D6] active:scale-[0.99]"
                 : "bg-white border border-cardBorder text-textSecondary cursor-not-allowed",
             ].join(" ")}
           >
-            {generating ? (
-              <>
-                <PenMark size={22} />
-                Writing…
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-rounded" style={{ fontSize: 20 }}>
-                  auto_awesome
-                </span>
-                Generate my review
-              </>
-            )}
+            <span className="material-symbols-rounded" style={{ fontSize: 20 }}>
+              auto_awesome
+            </span>
+            Generate my review
           </button>
           {!canGenerate && !hasGenerated && <p className="mt-2 text-center text-xs text-textSecondary">Select at least one highlight above to generate.</p>}
-          {hasGenerated && !generating && (
+          {hasGenerated && (
             <p id="review-section" className="mt-2 text-center text-xs font-medium text-googleGreen flex items-center justify-center gap-1">
               <span className="material-symbols-rounded" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>
                 check_circle
@@ -231,51 +215,13 @@ export default function ReviewClient({ shop, qr }) {
           )}
         </div>
 
-        {generating ? (
-          <div className="mt-6" style={{ animation: "fadeUp 250ms ease-out" }}>
-            <div className="rounded-card border border-cardBorder bg-white p-4 shadow-card sm:p-5">
-              <div className="flex items-center gap-4">
-                <WritingMascot src={mascotSrc} size={96} />
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-textPrimary">Writing your review…</p>
-                  <p className="mt-0.5 text-xs text-textSecondary">Blending your stars, highlights and tone</p>
-                  <div
-                    className="mt-2.5 h-3.5 w-28 rounded bg-surface"
-                    style={{
-                      background: "linear-gradient(90deg,#F1F3F4 25%,#E8EAED 50%,#F1F3F4 75%)",
-                      backgroundSize: "200% 100%",
-                      animation: "shimmer 1.2s infinite",
-                    }}
-                  />
-                </div>
-              </div>
-              <div className="mt-3 space-y-2">
-                <div
-                  className="h-3 w-full rounded bg-surface"
-                  style={{
-                    background: "linear-gradient(90deg,#F1F3F4 25%,#E8EAED 50%,#F1F3F4 75%)",
-                    backgroundSize: "200% 100%",
-                    animation: "shimmer 1.2s infinite",
-                  }}
-                />
-                <div
-                  className="h-3 w-5/6 rounded bg-surface"
-                  style={{
-                    background: "linear-gradient(90deg,#F1F3F4 25%,#E8EAED 50%,#F1F3F4 75%)",
-                    backgroundSize: "200% 100%",
-                    animation: "shimmer 1.2s infinite",
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        ) : hasGenerated ? (
+        {hasGenerated && (
           <div className="mt-6" style={{ animation: "fadeUp 250ms ease-out" }}>
             <ReviewPreview text={review} setText={setReview} onRegenerate={doGenerate} mascotSrc={mascotSrc} />
           </div>
-        ) : null}
+        )}
 
-        {hasGenerated && !generating && (
+        {hasGenerated && (
           <div className="fixed inset-x-0 bottom-0 z-20 border-t border-cardBorder bg-white/95 backdrop-blur">
             <div className="mx-auto flex max-w-[640px] gap-3 px-4 py-3 sm:px-6">
               <button
