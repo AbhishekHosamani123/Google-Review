@@ -6,7 +6,7 @@ export default function LandingPage() {
       <header className="border-b border-cardBorder bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <span className="text-sm font-bold tracking-tight text-textPrimary flex items-center gap-2">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-googleBlue text-xs font-bold text-white">R</span>
+            <img src="/radhakrishna-logo.png" alt="Radha Krishna logo" className="inline-block h-7 w-7 rounded-lg border border-cardBorder bg-white object-contain" />
             ReviewHub
           </span>
           <Link href="/login" className="rounded-full bg-textPrimary px-5 py-2 text-sm font-semibold text-white hover:bg-black">Admin login</Link>

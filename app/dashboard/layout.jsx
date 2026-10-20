@@ -5,7 +5,7 @@ export default function DashboardLayout({ children }) {
       <header className="sticky top-0 z-20 border-b border-cardBorder bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <Link href="/dashboard/shops" className="text-sm font-bold tracking-tight text-textPrimary flex items-center gap-2">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-googleBlue text-xs font-bold text-white">R</span> ReviewHub
+            <img src="/radhakrishna-logo.png" alt="Radha Krishna logo" className="inline-block h-7 w-7 rounded-lg border border-cardBorder bg-white object-contain" /> ReviewHub
             <span className="hidden sm:inline text-xs font-medium text-textSecondary">· Admin</span>
           </Link>
           <form action="/api/auth/signout" method="post">
