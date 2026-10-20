@@ -47,6 +47,51 @@ export async function POST(req) {
 
   const PLACEID = /placeid=(ChIJ[A-Za-z0-9_\-]+)/;
 
+  // A Google place ID (ChIJ...) is a base64url protobuf of the two hexes that
+  // Maps URLs carry as data=!1s0x<hex1>:0x<hex2>:
+  //   0a 12 09 <hex1 little-endian> 11 <hex2 little-endian>
+  // So we can synthesize the 1-tap writereview link from any Maps URL that has
+  // the pair — no scraping of Google's bot-walled pages needed.
+  const FTPAIR = /!1s0x([0-9a-fA-F]{8,16}):0x([0-9a-fA-F]{8,16})/;
+  const placeIdFromPair = (f1, f2) => {
+    const le = (hex) => {
+      const pad = hex.length % 2 ? "0" + hex : hex;
+      const arr = [];
+      for (let i = 0; i < pad.length; i += 2) arr.push(parseInt(pad.slice(i, i + 2), 16));
+      arr.reverse();
+      return arr;
+    };
+    const bytes = [0x0a, 0x12, 0x09, ...le(f1), 0x11, ...le(f2)];
+    return Buffer.from(bytes)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+  };
+  // pull a usable place id out of any URL text: explicit ?placeid=, the
+  // !19sChIJ slot, or the 0x hex pair
+  const placeIdIn = (text) => {
+    const p = String(text).match(PLACEID);
+    if (p) return { id: p[1], source: "placeid" };
+    const slot = String(text).match(/!19s(ChIJ[A-Za-z0-9_\-]+)/);
+    if (slot) return { id: slot[1], source: "19s" };
+    const pair = String(text).match(FTPAIR);
+    if (pair) return { id: placeIdFromPair(pair[1], pair[2]), source: "pair" };
+    return null;
+  };
+  const writereviewFor = (placeId) =>
+    `https://search.google.com/local/writereview?placeid=${placeId}`;
+  const placeNameIn = (text) => {
+    try {
+      const seg = new URL(String(text)).pathname.split("/place/")[1];
+      return seg ? decodeURIComponent(seg.split("/")[0]).replace(/\+/g, " ") : "";
+    } catch {
+      return "";
+    }
+  };
+
+  // already a 1-tap review link? no network needed
+
   // "Review dialog" URLs — the exact format Google emits when someone clicks
   // *Review* on a Knowledge-Panel listing and copies the address bar:
   //   https://www.google.com/search?...&q=<name>&ludocid=<dec>&lsig=<tok>#lrd=0x<hex>:0x<hex>,3
@@ -79,6 +124,20 @@ export async function POST(req) {
     return Response.json({ kind: "writereview", url, placeId: url.match(PLACEID)[1], title: "Opens the review dialog directly — best kind of link" });
   }
 
+  // Input already carries the 0x pair (a full Maps place URL pasted out of the
+  // address bar): forge the place id from it — no network needed.
+  const inline = url.match(FTPAIR);
+  if (inline) {
+    const placeId = placeIdFromPair(inline[1], inline[2]);
+    return Response.json({
+      kind: "writereview",
+      url: writereviewFor(placeId),
+      placeId,
+      name: placeNameIn(url),
+      title: "Opens the review dialog directly — best kind of link",
+    });
+  }
+
   // follow Google's redirect chain server-side (fetch follows by default; res.url is the final URL)
   try {
     const res = await fetch(url, {
@@ -92,13 +151,15 @@ export async function POST(req) {
     let u;
     try { u = new URL(finalUrl); } catch { return Response.json({ kind: "fallback", url, title: "Saved as-is" }); }
 
-    // a place id surfaced in the redirect chain -> upgrade to the 1-tap dialog link
-    const m = finalUrl.match(PLACEID) || finalUrl.match(/!19s(ChIJ[A-Za-z0-9_\-]+)/);
-    if (m) {
+    // a place id surfaced in the redirect chain (explicit placeid, the !19s
+    // slot, or the 0x pair Maps embeds) -> upgrade to the 1-tap dialog link
+    const found = placeIdIn(finalUrl);
+    if (found) {
       return Response.json({
         kind: "writereview",
-        url: `https://search.google.com/local/writereview?placeid=${m[1]}`,
-        placeId: m[1],
+        url: writereviewFor(found.id),
+        placeId: found.id,
+        name: placeNameIn(finalUrl),
         title: "Opens the review dialog directly — best kind of link",
       });
     }
@@ -107,7 +168,7 @@ export async function POST(req) {
     // profile with the visible "Review" button (2 taps total from our page).
     const isGoogle = /(^|\.)google\.[a-z.]+$/.test(u.hostname);
     const kg = u.searchParams.get("kgmid") || "";
-    const qName = u.searchParams.get("q") || u.pathname.split("/").slice(-2)[0].replace(/\+/g, " ");
+    const qName = u.searchParams.get("q") || placeNameIn(finalUrl) || u.pathname.split("/").slice(-2)[0].replace(/\+/g, " ");
     if (isGoogle && (kg || /maps\/place\//.test(u.pathname) || u.pathname.startsWith("/search"))) {
       // Shortener inputs (share.google, goo.gl, maps.app.goo.gl) are stored
       // VERBATIM — it's Google's canonical, app-aware link and redirects Google
