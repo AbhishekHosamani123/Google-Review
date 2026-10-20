@@ -113,11 +113,9 @@ export default function ReviewClient({ shop, qr }) {
   return (
     <div className="min-h-screen bg-surface">
       <header className="sticky top-0 z-30 border-b border-cardBorder bg-white/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[640px] items-center justify-between gap-2 px-4 py-3 sm:px-6">
-          <span className="flex min-w-0 items-center gap-2">
-            <img src="/radhakrishna-logo.png" alt="Radha Krishna" className="h-7 w-7 shrink-0 rounded-lg border border-cardBorder bg-white object-contain" />
-            <span className="truncate text-base font-bold tracking-tight text-textPrimary sm:text-lg">{shop.name}</span>
-          </span>
+        <div className="relative mx-auto flex max-w-[640px] items-center justify-between gap-2 px-4 py-3 sm:px-6">
+          <span className="truncate text-base font-bold tracking-tight text-textPrimary sm:text-lg">{shop.name}</span>
+          <img src="/radhakrishna-logo.png" alt="Radha Krishna" className="absolute left-1/2 top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 object-contain" />
           <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-cardBorder bg-white px-3 py-1.5 text-xs font-semibold text-textSecondary sm:text-sm">
             <span className="h-2 w-2 rounded-full bg-googleGreen" /> Review on Google
           </span>
