@@ -95,26 +95,39 @@ export async function GET(req) {
   if (!info) return new Response("Unknown QR number", { status: 404 });
   const { link, code } = info;
   try {
-    // CRYSTAL-CLEAR QR: integer pixels per module (no resizing = no noise),
-    // fully transparent background so it sits directly on the card
-    const qrData = QRCode.create(link, { errorCorrectionLevel: "H" });
-    const modules = qrData.modules.size; // e.g. 29 for short links at ECC level H
-    const QUIET = 2; // quiet-zone modules (transparent, invisible on the card)
-    const cardBg = "#F8F7F7"; // sampled from the template around the QR zone
-    let ppum = 9; // integer pixels per module
-    const maxSide = PATCH.w - 4; // stay inside the cover patch
-    if ((modules + QUIET * 2) * ppum > maxSide) ppum = Math.max(6, Math.floor(maxSide / (modules + QUIET * 2)));
+    // CLEAN, MINIMAL QR: ECC level M (poster standard) keeps the same URL but
+    // drops the density from version 6 / 41 modules to version 4 / 33 modules.
+    // Pure black on pure white, integer pixels per module (no resample noise),
+    // generous quiet zone, pasted 1:1.
+    const ECC = "M";
+    const QUIET = 2; // quiet-zone modules inside the QR buffer
+    const qrData = QRCode.create(link, { errorCorrectionLevel: ECC });
+    const modules = qrData.modules.size;
+    const units = modules + QUIET * 2;
+    const maxSide = PATCH.w - 8; // min 4px panel padding each side
+    let ppum = 8; // integer pixels per module — biggest that fits
+    while (units * ppum > maxSide && ppum > 4) ppum--;
     const qrPng = await QRCode.toBuffer(link, {
       scale: ppum,
       margin: QUIET,
-      errorCorrectionLevel: "H",
-      color: { dark: "#000000ff", light: "#00000000" }, // transparent background
+      errorCorrectionLevel: ECC,
+      color: { dark: "#000000ff", light: "#ffffffff" }, // true black on pure white
     });
-    const qrPx = (modules + QUIET * 2) * ppum;
-    // cover patches painted in the card's own background colour — invisible
-    const bgPatch = `<svg xmlns="http://www.w3.org/2000/svg" width="${PATCH.w}" height="${PATCH.h}"><rect width="100%" height="100%" fill="${cardBg}"/></svg>`;
-    const whitePatch = Buffer.from(bgPatch);
-    const textPatch = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${TEXT_PATCH.w}" height="${TEXT_PATCH.h}"><rect width="100%" height="100%" fill="${cardBg}"/></svg>`);
+    const qrPx = units * ppum;
+    // the QR panel: pure white, soft rounded corners like the poster's other
+    // elements, painted in the exact spot of the sample QR's panel
+    const whitePatch = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${PATCH.w}" height="${PATCH.h}"><rect x="0" y="0" width="${PATCH.w}" height="${PATCH.h}" rx="18" ry="18" fill="#ffffff"/></svg>`);
+    const cardBg = "#F8F7F7"; // sampled from the template around the QR zone
+    // below the panel the template has a slight vertical sheen (246 -> 244);
+    // a matching gradient makes the text-cover patch invisible
+    const textPatch = Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${TEXT_PATCH.w}" height="${TEXT_PATCH.h}">` +
+        `<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">` +
+          `<stop offset="0" stop-color="#F6F5F5"/><stop offset="1" stop-color="#F4F4F4"/>` +
+        `</linearGradient></defs>` +
+        `<rect width="100%" height="100%" fill="url(#g)"/>` +
+      `</svg>`
+    );
     // the card's own short code, vectorised (bundled font -> paths)
     const safe = String(code || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 8);
     const codeSvg = codeGlyphsSvg(safe);
