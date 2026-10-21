@@ -161,7 +161,6 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
     e.preventDefault();
     setErr("");
     if (!name.trim()) { setErr("Shop name is required"); return; }
-    if (!slug.trim()) { setErr("Slug is required"); return; }
     if (!googleUrl.trim() || !isValidGoogleReviewUrl(googleUrl.trim())) {
       setErr("Google review URL must be a valid Google link (e.g. share.google/..., g.page/r/.../review, or search.google.com writereview link)");
       return;
@@ -180,9 +179,10 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
         if (info && info.url && isValidGoogleReviewUrl(info.url)) finalGoogleUrl = info.url;
       }
       const supabase = createClient();
+      const finalSlug = slug.trim() || slugify(name); // slug is derived automatically — not user-editable anymore
       const payload = {
         name: name.trim(),
-        slug: slug.trim(),
+        slug: finalSlug,
         description: description.trim() || null,
         google_review_url: finalGoogleUrl,
         google_place_id: placeId.trim() || null,
@@ -235,22 +235,14 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="text-xs font-semibold text-textPrimary">Shop / business name *</span>
-          <input value={name} onChange={(e) => onNameChange(e.target.value)} required placeholder="Pink Verranda — works for hotel, restaurant, gym, clinic..." className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none focus:ring-2 focus:ring-googleBlue/20" />
-        </label>
-        <label className="block">
-          <span className="text-xs font-semibold text-textPrimary">Slug *</span>
-          <input value={slug} onChange={(e) => setSlug(slugify(e.target.value))} required placeholder="pink-verranda" className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm font-mono text-xs focus:border-googleBlue focus:outline-none" />
-          <span className="text-[11px] text-textSecondary">Admin only — QR uses code, not slug.</span>
-        </label>
-      </div>
+      <label className="block">
+        <span className="text-xs font-semibold text-textPrimary">Shop name *</span>
+        <input value={name} onChange={(e) => onNameChange(e.target.value)} required placeholder="Pink Varanda — hotel, restaurant, gym, clinic..." className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none focus:ring-2 focus:ring-googleBlue/20" />
+      </label>
 
       <label className="block">
-        <span className="text-xs font-semibold text-textPrimary">What does this shop do? — small description *</span>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="e.g. Family restaurant known for biryani and thali, spacious seating, quick service and warm hospitality..." className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none focus:ring-2 focus:ring-googleBlue/20" />
-        <span className="text-[11px] text-textSecondary">Used to suggest keywords below and to personalize generated reviews. Works for any business — restaurant, gym, hospital, cafe, salon...</span>
+        <span className="text-xs font-semibold text-textPrimary">About the shop *</span>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} placeholder="Family restaurant known for biryani, quick service and clean seating..." className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none focus:ring-2 focus:ring-googleBlue/20" />
       </label>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -283,12 +275,12 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
           <span className="text-xs font-semibold text-textPrimary">Shop owner phone number</span>
           <input type="tel" value={ownerPhone} onChange={(e) => setOwnerPhone(e.target.value)} placeholder="e.g. +91 98765 43210" className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none" />
         </label>
-        <span className="text-[11px] text-textSecondary sm:col-span-2">Stored with the shop in the database and shown next to the card in the dashboard — never shown to customers.</span>
+        <span className="text-[11px] text-textSecondary sm:col-span-2">Only you can see this — it stays with the shop record.</span>
       </div>
 
       <label className="block">
-        <span className="text-xs font-semibold text-textPrimary">Google review URL *</span>
-        <input value={googleUrl} onChange={(e) => { setGoogleUrl(e.target.value); setResolved(null); }} onBlur={() => resolveGoogleUrl(googleUrl)} required placeholder="Paste your Google share link — share.google/..., g.page/r/.../review, or a writereview link" className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm font-mono text-xs focus:border-googleBlue focus:outline-none" />
+        <span className="text-xs font-semibold text-textPrimary">Google review link *</span>
+        <input value={googleUrl} onChange={(e) => { setGoogleUrl(e.target.value); setResolved(null); }} onBlur={() => resolveGoogleUrl(googleUrl)} required placeholder="Paste any Google link (share.google/..., g.page/..., Maps link...)" className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm font-mono text-xs focus:border-googleBlue focus:outline-none" />
         {resolving && <span className="mt-1 block text-[11px] text-textSecondary">Checking the link…</span>}
         {resolved && !resolving && (
           <span className={`mt-1 block text-[11px] font-medium ${resolved.kind === "writereview" || resolved.kind === "direct-review" ? "text-green-700" : resolved.kind === "unknown" ? "text-amber-700" : "text-textSecondary"}`}>
@@ -301,9 +293,6 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
                   : "Link stored as-is"}
           </span>
         )}
-        <span className="mt-1 block text-[11px] text-textSecondary">
-          Any Google link works: your listing "Share" link (share.google/…), the Google Business Profile → "Ask for reviews" link (g.page/r/…/review — customers land straight on the review box), or a Place ID writereview link. Linked QRs follow this URL without reprinting.
-        </span>
       </label>
 
       <label className="block">
@@ -312,19 +301,19 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
       </label>
 
       <div className="rounded-xl border border-cardBorder bg-surface p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-textPrimary">Keywords — what the reviewer can tap (you control them)</span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="text-xs font-bold text-textPrimary">Review keywords</span>
           <div className="flex gap-2">
             <button type="button" onClick={genSuggestions} className="rounded-full border border-cardBorder bg-white px-3 py-1.5 text-xs font-semibold text-textPrimary hover:bg-white">
-              Suggest from description + category
+              Suggest
             </button>
             <button type="button" onClick={genMoreKeywords} className="rounded-full bg-googleBlue px-3 py-1.5 text-xs font-bold text-white hover:bg-[#3367D6]">
-              ⚡ Generate more keywords
+              ⚡ More
             </button>
           </div>
         </div>
-        <input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="Warm Hospitality, Clean Rooms, Tasty Food, Expert Trainers..." className="mt-3 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none" />
-        <p className="mt-1 text-[11px] text-textSecondary">Comma separated. Leave blank to use category defaults. These become the chips on the review page and shape the generated draft so it is specific to this shop.</p>
+        <input value={keywords} onChange={(e) => setKeywords(e.target.value)} placeholder="Warm Hospitality, Clean Rooms, Tasty Food..." className="mt-3 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none" />
+        <p className="mt-1 text-[11px] text-textSecondary">Comma separated — these become the tappable chips on the review page.</p>
         {suggested.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {suggested.map((s) => (
@@ -334,7 +323,6 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
             ))}
           </div>
         )}
-        <p className="mt-2 text-[11px] text-textSecondary/70">Tip: add 4–8 keywords that match the business (gym: Clean Equipment, Expert Trainers; hospital: Caring Staff, Hygienic...). Reviews generated will weave them in naturally.</p>
       </div>
 
       <div className="flex flex-wrap gap-4">
@@ -349,7 +337,7 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
       </div>
 
       <label className="block">
-        <span className="text-xs font-semibold text-textPrimary">Shop image (optional) — shown as the big photo on the customer review page</span>
+        <span className="text-xs font-semibold text-textPrimary">Shop photo (optional)</span>
         <input
           id="shop-img-input"
           type="file"
@@ -403,20 +391,21 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
             Remove image
           </button>
         )}
-        <span className="mt-1 block text-[11px] text-textSecondary">Upload a real photo of your shop (wide picture works best). It replaces the stock background and sits behind the shop name on the review page.</span>
       </label>
 
       {err && <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-googleRed">{err}</p>}
 
-      <div className="flex gap-3 pt-2">
-        <button disabled={loading} className="rounded-full bg-googleBlue px-6 py-3 text-sm font-bold text-white hover:bg-[#3367D6] disabled:opacity-50">
-          {loading ? "Saving..." : editing ? "Save changes" : "Create shop"}
-        </button>
-        {!embedded && (
-          <button type="button" onClick={() => history.back()} className="rounded-full border border-cardBorder bg-white px-6 py-3 text-sm font-semibold text-textPrimary hover:bg-surface">
-            Cancel
+      <div className="sticky bottom-4 z-20 mt-6">
+        <div className="flex items-center gap-2 rounded-2xl bg-textPrimary p-2 shadow-xl">
+          {!embedded && (
+            <button type="button" onClick={() => history.back()} className="shrink-0 rounded-xl bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15">
+              Cancel
+            </button>
+          )}
+          <button disabled={loading} className="flex-1 rounded-xl bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/20 disabled:opacity-50">
+            {loading ? "Saving..." : editing ? "Save changes" : "Create shop"}
           </button>
-        )}
+        </div>
       </div>
     </form>
   );

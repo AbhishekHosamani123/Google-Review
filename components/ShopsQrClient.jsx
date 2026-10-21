@@ -137,101 +137,71 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight text-textPrimary">QR Cards{demo && <span className="ml-2 rounded-full bg-amber-100 border border-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800">DEMO</span>}</h1>
-          <p className="mt-1 text-sm text-textSecondary">Each row is one physical card. Tap the QR number to see its card; tap Edit to set up the shop. Generate a unique QR, set it up, then print — the destination can change any time without reprinting. Scans count unique devices per shop.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={generateOne}
-            disabled={busy === "new"}
-            className="rounded-full bg-googleBlue px-5 py-2.5 text-sm font-bold text-white hover:bg-[#3367D6] disabled:opacity-50"
-          >
-            {busy === "new" ? "Generating..." : "+ Generate QR code"}
-          </button>
-        </div>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-textPrimary">
+          QR Cards
+          {demo && <span className="ml-2 rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800">DEMO</span>}
+        </h1>
+        <button
+          onClick={generateOne}
+          disabled={busy === "new"}
+          className="flex-1 rounded-full bg-googleBlue px-5 py-3 text-sm font-bold text-white hover:bg-[#3367D6] disabled:opacity-50 sm:flex-none sm:py-2.5"
+        >
+          {busy === "new" ? "Generating..." : "+ Generate QR code"}
+        </button>
       </div>
 
-      {err && <p className="mt-3 rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-googleRed">{err}</p>}
-      {demo && <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">Demo mode — new QRs are local only. Connect Supabase to persist.</p>}
+      {err && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-googleRed">{err}</p>}
+      {demo && <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">Demo mode — new QRs are local only. Connect Supabase to persist.</p>}
 
-      <div className="mt-5 overflow-hidden rounded-card border border-cardBorder bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-cardBorder bg-surface text-xs font-semibold text-textSecondary">
-              <tr>
-                <th className="px-4 py-3">QR</th>
-                <th className="px-4 py-3">Shop</th>
-                <th className="px-4 py-3 text-center">Scans</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Edit</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-cardBorder">
-              {numbered.map((q) => {
-                const shop = shops.find((s) => s.id === q.shop_id);
-                const notSetUp = shop && !shop.google_review_url;
-                const row = ["px-4 py-3 whitespace-nowrap", q.is_active ? "" : "opacity-50"].join(" ");
-                return (
-                  <tr key={q.id} className="hover:bg-surface/50">
-                    <td className={row}>
-                      <button onClick={() => { setOpenId(q.id); setMode("card"); }} className="text-left group" title="Show this card">
-                        <span className="block font-bold text-textPrimary group-hover:text-googleBlue">QR{q.qrNum}</span>
-                        <span className="block font-mono text-[11px] text-textSecondary">{q.code}</span>
-                      </button>
-                    </td>
-                    <td className={`${row} max-w-[240px]`}>
-                      {notSetUp ? (
-                        <button onClick={() => { setOpenId(q.id); setMode("edit"); }} className="text-left">
-                          <span className="block font-semibold text-textSecondary">Not set up yet</span>
-                          <span className="block text-xs text-textSecondary/80 hover:text-googleBlue">{qrLinkUrl(q).replace(/^https?:\/\//, "")} — tap Edit</span>
-                        </button>
-                      ) : shop ? (
-                        <a href={qrLinkUrl(q)} target="_blank" rel="noopener noreferrer" title="Open review page in a new tab">
-                          <span className="block font-semibold text-textPrimary hover:text-googleBlue truncate">{shop.name}</span>
-                          <span className="block text-xs text-textSecondary truncate">{qrLinkUrl(q).replace(/^https?:\/\//, "")}</span>
-                        </a>
-                      ) : (
-                        <button onClick={() => { setOpenId(q.id); setMode("edit"); }} className="text-left text-xs text-textSecondary hover:text-textPrimary">
-                          — no listing · tap Edit
-                        </button>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-googleBlue/10 border border-googleBlue/20 px-2.5 py-1 text-xs font-bold text-googleBlue">
-                        <span className="material-symbols-rounded" style={{ fontSize: 12 }}>visibility</span>
-                        {q.scans_count || 0}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {notSetUp ? (
-                        <span className="inline-flex rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-2 py-1 text-xs font-semibold">Setup needed</span>
-                      ) : (
-                        <span className={["inline-flex rounded-full px-2 py-1 text-xs font-semibold", q.is_active ? "bg-green-50 text-green-700 border border-green-200" : "bg-zinc-100 text-zinc-500 border border-zinc-200"].join(" ")}>
-                          {q.is_active ? "Active" : "Inactive"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => { setOpenId(q.id); setMode("edit"); }}
-                        className="rounded-full border border-cardBorder bg-white px-3 py-1.5 text-xs font-semibold text-textPrimary hover:bg-surface"
-                      >
-                        Edit
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {numbered.length === 0 && <p className="py-10 text-center text-sm text-textSecondary">No QR cards yet. Use “+ Generate QR code” above.</p>}
+      <div className="mt-5 space-y-3">
+        {numbered.map((q) => {
+          const shop = shops.find((s) => s.id === q.shop_id);
+          const notSetUp = shop && !shop.google_review_url;
+          return (
+            <div key={q.id} className={["flex items-center gap-3 rounded-2xl border border-cardBorder bg-white p-3.5 shadow-sm transition-shadow hover:shadow-md sm:gap-4 sm:p-4", q.is_active ? "" : "opacity-60"].join(" ")}>
+              <button
+                onClick={() => { setOpenId(q.id); setMode("card"); }}
+                className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-googleBlue/20 bg-googleBlue/10 transition hover:bg-googleBlue/20"
+                title="View this card"
+              >
+                <span className="text-sm font-extrabold tracking-tight text-googleBlue">QR{q.qrNum}</span>
+              </button>
+              <div className="min-w-0 flex-1">
+                {notSetUp ? (
+                  <p className="truncate text-sm font-semibold text-textSecondary">Not set up yet</p>
+                ) : shop ? (
+                  <a href={qrLinkUrl(q)} target="_blank" rel="noopener noreferrer" title="Open the review page" className="block truncate text-sm font-bold text-textPrimary hover:text-googleBlue">
+                    {shop.name}
+                  </a>
+                ) : (
+                  <p className="truncate text-sm font-semibold text-textSecondary">No listing yet</p>
+                )}
+                <div className="mt-1.5 flex items-center gap-1.5">
+                  {notSetUp ? (
+                    <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800">Setup needed</span>
+                  ) : (
+                    <span className={["inline-flex rounded-full border px-2 py-0.5 text-[11px] font-semibold", q.is_active ? "border-green-200 bg-green-50 text-green-700" : "border-zinc-200 bg-zinc-100 text-zinc-500"].join(" ")}>
+                      {q.is_active ? "Active" : "Inactive"}
+                    </span>
+                  )}
+                  <span className="inline-flex items-center gap-1 rounded-full border border-googleBlue/20 bg-googleBlue/10 px-2 py-0.5 text-[11px] font-bold text-googleBlue">
+                    <span className="material-symbols-rounded" style={{ fontSize: 12 }}>visibility</span>
+                    {q.scans_count || 0}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => { setOpenId(q.id); setMode("edit"); }}
+                className="shrink-0 rounded-full bg-textPrimary px-4 py-2.5 text-xs font-bold text-white transition hover:bg-black"
+                title="Set up or edit this shop"
+              >
+                Edit
+              </button>
+            </div>
+          );
+        })}
+        {numbered.length === 0 && <p className="py-10 text-center text-sm text-textSecondary">No QR cards yet.</p>}
       </div>
-
-      <p className="mt-4 text-xs text-textSecondary/70">
-        Every card prints with its own QR: <b>/r/QR1</b> on card QR1, <b>/r/QR2</b> on card QR2, and so on — print first, set up the shop later, and change the destination any time without reprinting. Old-style links remain valid forever.
-      </p>
 
       {/* ---------- Fullscreen: CARD view (QR number click) ---------- */}
       {openQr && mode === "card" && (
@@ -245,16 +215,15 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                 </button>
                 <div>
                   <p className="text-lg font-bold tracking-tight text-textPrimary">
-                    QR{openQr.qrNum} <span className="ml-1 font-mono text-sm font-semibold text-textSecondary">{openQr.code}</span>
+                    QR{openQr.qrNum}
                   </p>
                   <p className="text-xs text-textSecondary">
-                    {openQr.label || "—"} · {openQr.type.toUpperCase()} · {openQr.scans_count || 0} scans{openShop ? ` · ${openShop.name}` : ""}
-                    {openShop?.owner_name ? ` · Owner: ${openShop.owner_name}${openShop?.owner_phone ? ` · ${openShop.owner_phone}` : ""}` : ""}
+                    {openShop?.name || openQr.label || "—"} · {openQr.scans_count || 0} scans
                   </p>
                 </div>
               </div>
-              <button onClick={() => setOpenId(null)} className="rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface">
-                Back to dashboard
+              <button onClick={() => setOpenId(null)} className="hidden rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface sm:inline-flex">
+                Dashboard
               </button>
             </div>
           </div>
@@ -285,7 +254,7 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
               </a>
 
               <div className="mt-4 rounded-xl border border-googleBlue/30 bg-white p-3">
-                <p className="text-[11px] font-bold text-googleBlue">NFC chip &amp; QR link — copy this URL onto the NFC chip placed at the shop</p>
+                <p className="text-[11px] font-bold text-googleBlue">NFC and QR link — copy onto the chip</p>
                 <div className="mt-2 flex gap-2">
                   <input
                     readOnly
@@ -300,7 +269,12 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                     {copied === `nfc-${openQr.id}` ? "Copied!" : "Copy URL"}
                   </button>
                 </div>
-                <p className="mt-1.5 text-[11px] text-textSecondary">This URL never changes — changing the shop or its Google link later does not require reprinting.</p>
+                {openShop?.owner_name || openShop?.owner_phone ? (
+                  <p className="mt-2 text-[11px] text-textSecondary">
+                    Owner: <span className="font-semibold text-textPrimary">{openShop.owner_name}</span>
+                    {openShop.owner_phone ? ` · ${openShop.owner_phone}` : ""}
+                  </p>
+                ) : null}
               </div>
 
               <div className="mt-3 flex gap-2">
@@ -339,13 +313,11 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                   <p className="text-lg font-bold tracking-tight text-textPrimary">
                     Edit QR{openQr.qrNum} <span className="ml-1 font-mono text-sm font-semibold text-textSecondary">{openQr.code}</span>
                   </p>
-                  <p className="text-xs text-textSecondary">
-                    Set up the shop for this card{isUntouched ? " — fill the details, then Save" : ""}
-                  </p>
+                  <p className="text-xs text-textSecondary">Set up the shop details</p>
                 </div>
               </div>
-              <button onClick={() => setOpenId(null)} className="rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface">
-                Back to dashboard
+              <button onClick={() => setOpenId(null)} className="hidden rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface sm:inline-flex">
+                Dashboard
               </button>
             </div>
           </div>
