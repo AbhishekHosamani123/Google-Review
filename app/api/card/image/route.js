@@ -19,9 +19,8 @@ const CARD_PATH = path.join(process.cwd(), "new-card.png");
 
 const CARD_W = 1254;
 // zones measured on the 1254x1254 template (right half, "OR SCAN QR" column)
-const PATCH = { x: 812, y: 815, w: 302, h: 306 }; // white cover over the sample QR
-const QR_SIDE = 282; // our QR inside the patch (centred)
-const TEXT_PATCH = { x: 858, y: 1126, w: 210, h: 52 }; // white cover over the sample code text
+const PATCH = { x: 812, y: 815, w: 302, h: 306 }; // cover over the sample QR
+const TEXT_PATCH = { x: 858, y: 1126, w: 210, h: 52 }; // cover over the sample code text
 const TEXT_SIZE = 42; // cap height matches the sample "KEJF9"
 const TEXT_BASELINE = 37; // baseline inside the text patch
 
@@ -96,25 +95,37 @@ export async function GET(req) {
   if (!info) return new Response("Unknown QR number", { status: 404 });
   const { link, code } = info;
   try {
+    // CRYSTAL-CLEAR QR: integer pixels per module (no resizing = no noise),
+    // fully transparent background so it sits directly on the card
+    const qrData = QRCode.create(link, { errorCorrectionLevel: "H" });
+    const modules = qrData.modules.size; // e.g. 29 for short links at ECC level H
+    const QUIET = 2; // quiet-zone modules (transparent, invisible on the card)
+    const cardBg = "#F8F7F7"; // sampled from the template around the QR zone
+    let ppum = 9; // integer pixels per module
+    const maxSide = PATCH.w - 4; // stay inside the cover patch
+    if ((modules + QUIET * 2) * ppum > maxSide) ppum = Math.max(6, Math.floor(maxSide / (modules + QUIET * 2)));
     const qrPng = await QRCode.toBuffer(link, {
-      width: 900,
+      scale: ppum,
+      margin: QUIET,
       errorCorrectionLevel: "H",
-      margin: 2,
-      color: { dark: "#000000ff", light: "#ffffffff" },
+      color: { dark: "#000000ff", light: "#00000000" }, // transparent background
     });
-    const whitePatch = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${PATCH.w}" height="${PATCH.h}"><rect width="100%" height="100%" fill="#ffffff"/></svg>`);
-    const textPatch = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${TEXT_PATCH.w}" height="${TEXT_PATCH.h}"><rect width="100%" height="100%" fill="#ffffff"/></svg>`);
+    const qrPx = (modules + QUIET * 2) * ppum;
+    // cover patches painted in the card's own background colour — invisible
+    const bgPatch = `<svg xmlns="http://www.w3.org/2000/svg" width="${PATCH.w}" height="${PATCH.h}"><rect width="100%" height="100%" fill="${cardBg}"/></svg>`;
+    const whitePatch = Buffer.from(bgPatch);
+    const textPatch = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${TEXT_PATCH.w}" height="${TEXT_PATCH.h}"><rect width="100%" height="100%" fill="${cardBg}"/></svg>`);
     // the card's own short code, vectorised (bundled font -> paths)
     const safe = String(code || "").replace(/[^A-Za-z0-9]/g, "").slice(0, 8);
     const codeSvg = codeGlyphsSvg(safe);
-    const qrSquare = await sharp(qrPng).resize(QR_SIDE, QR_SIDE, { fit: "fill" }).png().toBuffer();
-    const layers = [
+    const compositeLayers = [
       { input: whitePatch, left: PATCH.x, top: PATCH.y },
-      { input: qrSquare, left: PATCH.x + Math.round((PATCH.w - QR_SIDE) / 2), top: PATCH.y + Math.round((PATCH.h - QR_SIDE) / 2) },
+      // paste the QR 1:1 at its native crisp size — no resample noise
+      { input: qrPng, left: PATCH.x + Math.round((PATCH.w - qrPx) / 2), top: PATCH.y + Math.round((PATCH.h - qrPx) / 2) },
       { input: textPatch, left: TEXT_PATCH.x, top: TEXT_PATCH.y },
     ];
-    if (codeSvg) layers.push({ input: codeSvg, left: TEXT_PATCH.x, top: TEXT_PATCH.y });
-    let card = await sharp(CARD_PATH).composite(layers).png().toBuffer();
+    if (codeSvg) compositeLayers.push({ input: codeSvg, left: TEXT_PATCH.x, top: TEXT_PATCH.y });
+    let card = await sharp(CARD_PATH).composite(compositeLayers).png().toBuffer();
     if (size !== CARD_W) card = await sharp(card).resize(size, size).png().toBuffer();
     return new Response(card, { headers: { "Content-Type": "image/png", "Cache-Control": "public, max-age=600" } });
   } catch (e) {
