@@ -89,11 +89,12 @@ export async function GET(req) {
   }
   if (!link) return new Response("Unknown QR number", { status: 404 });
   try {
-    // clean, minimal QR: short permanent URL, ECC level M (fewer modules than
-    // H), integer pixel-per-module scaling, pure black on TRANSPARENT background
-    // (the card's own surface supplies the light background + generous quiet
-    // zone, so the code blends into the card with no visible image boundary).
-    const { errorCorrectionLevel: ECC } = { errorCorrectionLevel: "M" };
+    // clean, minimal QR: short permanent URL, ECC level L (fewest modules for
+    // this URL: version 3 = 29x29 instead of 33x33), integer pixel-per-module
+    // scaling, pure black on TRANSPARENT background (the card's own surface
+    // supplies the light background + generous quiet zone, so the code blends
+    // into the card with no visible image boundary).
+    const { errorCorrectionLevel: ECC } = { errorCorrectionLevel: "L" };
     const modulesCount = QRCode.create(link, { errorCorrectionLevel: ECC }).modules.size;
     const usable = Math.min(COVER.w, COVER.h) - 44; // quiet zone ≈22px on each side
     const ppum = Math.max(6, Math.floor(usable / modulesCount)); // integer px per module
