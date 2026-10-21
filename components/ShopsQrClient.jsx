@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { qrLinkUrl, withQrNumbers, newCode } from "@/lib/qr";
+import { qrLinkUrl, withQrNumbers, newCode, CARD_IMAGE_VERSION } from "@/lib/qr";
 import ShopForm from "@/components/ShopForm";
 import Toast from "@/components/Toast";
 
@@ -231,14 +231,14 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
           <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
             <div className="mx-auto max-w-md rounded-card border border-cardBorder bg-white p-5">
               <img
-                src={`/api/card/image?qr=${openQr.qrNum}&size=640`}
+                src={`/api/card/image?qr=${openQr.qrNum}&size=640&v=${CARD_IMAGE_VERSION}`}
                 alt={`QR${openQr.qrNum} printed card`}
                 width={640}
                 height={640}
                 className="w-full rounded-xl border border-cardBorder bg-white shadow-sm"
               />
               <a
-                href={`/api/card/image?qr=${openQr.qrNum}&size=1254`}
+                href={`/api/card/image?qr=${openQr.qrNum}&size=1254&v=${CARD_IMAGE_VERSION}`}
                 download={`QR${openQr.qrNum}-card.png`}
                 className="mt-4 flex items-center justify-center gap-1.5 rounded-full bg-textPrimary px-4 py-2.5 text-xs font-bold text-white hover:opacity-90"
               >
