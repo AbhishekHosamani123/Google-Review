@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { headers } from "next/headers";
 import ReviewClient from "@/components/ReviewClient";
 import FastForward from "@/components/FastForward";
 import { isDemoMode, getDemoQrByCode, getDemoQrs, getDemoShopById } from "@/lib/demo";
@@ -25,6 +26,11 @@ function NotLinked({ qrref }) {
 // breaks a printed card or NFC chip.
 export default async function ReviewPage({ qrref, shopref }) {
   const demo = isDemoMode();
+  // live request origin so canonical redirects always point at the live domain
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host");
+  const proto = (h.get("x-forwarded-proto") || (host && host.startsWith("localhost") ? "http" : "https")).split(",")[0];
+  const reqBase = host ? `${proto}://${host}` : "";
   let qr = null;
 
   // /r/Radha<n> (canonical) and legacy /r/QR<n> both resolve card n positionally;
@@ -43,7 +49,7 @@ export default async function ReviewPage({ qrref, shopref }) {
       }
     }
     // canonical URL has no shop name — anything after /r/Radha<n>/ is dropped
-    if (qr && (shopref || legacyQrLink)) redirect(qrLinkUrl(qr));
+    if (qr && (shopref || legacyQrLink)) redirect(qrLinkUrl(qr, reqBase));
   } else if (qrref) {
     if (demo) qr = getDemoQrByCode(qrref) || null;
     else {
