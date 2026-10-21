@@ -52,6 +52,8 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
   const [placeId, setPlaceId] = useState(shop?.google_place_id || "");
   const [address, setAddress] = useState(shop?.address || "");
   const [city, setCity] = useState(shop?.city || "");
+  const [ownerName, setOwnerName] = useState(shop?.owner_name || "");
+  const [ownerPhone, setOwnerPhone] = useState(shop?.owner_phone || "");
   const [category, setCategory] = useState(shop?.category || "Restaurant");
   const [aiEnabled, setAiEnabled] = useState(shop?.ai_enabled ?? true);
   const [isActive, setIsActive] = useState(shop?.is_active ?? true);
@@ -164,6 +166,9 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
       setErr("Google review URL must be a valid Google link (e.g. share.google/..., g.page/r/.../review, or search.google.com writereview link)");
       return;
     }
+    if (ownerPhone.trim() && !/^[+()0-9\-\s]{4,20}$/.test(ownerPhone.trim())) {
+      setErr("Owner phone number looks wrong — use digits with optional +, spaces or dashes"); return;
+    }
     setLoading(true);
     try {
       // normalize the Google link before storing: shorteners (share.google,
@@ -188,6 +193,12 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
         is_active: isActive,
         keywords: keywords.trim() ? keywords.split(",").map((s) => s.trim()).filter(Boolean) : null,
       };
+      // owner fields go through only when this shop carries owner data, so a
+      // deployment ahead of the database upgrade never fails to save
+      if (ownerName.trim() || ownerPhone.trim() || shop?.owner_name || shop?.owner_phone) {
+        payload.owner_name = ownerName.trim() || null;
+        payload.owner_phone = ownerPhone.trim() || null;
+      }
       let shopId = shop?.id;
       let data, error;
       if (editing) {
@@ -212,7 +223,12 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
       router.push("/dashboard/shops");
       router.refresh();
     } catch (e2) {
-      setErr(e2.message || String(e2));
+      const msg = e2.message || String(e2);
+      setErr(
+        /owner_name|owner_phone/.test(msg) && /column|schema cache|could not find/i.test(msg)
+          ? "Database upgrade pending — open Supabase → SQL Editor, run the owner-fields script, then press Save again."
+          : msg
+      );
       setLoading(false);
     }
   }
@@ -256,6 +272,18 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
           <span className="text-xs font-semibold text-textPrimary">Address</span>
           <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Near bus stand..." className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none" />
         </label>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="text-xs font-semibold text-textPrimary">Shop owner name</span>
+          <input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} placeholder="e.g. Rajesh Kumar" className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none focus:ring-2 focus:ring-googleBlue/20" />
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold text-textPrimary">Shop owner phone number</span>
+          <input type="tel" value={ownerPhone} onChange={(e) => setOwnerPhone(e.target.value)} placeholder="e.g. +91 98765 43210" className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none" />
+        </label>
+        <span className="text-[11px] text-textSecondary sm:col-span-2">Stored with the shop in the database and shown next to the card in the dashboard — never shown to customers.</span>
       </div>
 
       <label className="block">

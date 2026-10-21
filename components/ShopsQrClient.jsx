@@ -249,6 +249,7 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                   </p>
                   <p className="text-xs text-textSecondary">
                     {openQr.label || "—"} · {openQr.type.toUpperCase()} · {openQr.scans_count || 0} scans{openShop ? ` · ${openShop.name}` : ""}
+                    {openShop?.owner_name ? ` · Owner: ${openShop.owner_name}${openShop?.owner_phone ? ` · ${openShop.owner_phone}` : ""}` : ""}
                   </p>
                 </div>
               </div>
