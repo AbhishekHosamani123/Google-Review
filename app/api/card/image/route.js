@@ -13,11 +13,51 @@ import { isDemoMode, getDemoQrs } from "@/lib/demo";
 const CARD_PATH = path.join(process.cwd(), "New_card.png");
 
 // placement measured on the 1254x1254 card (QR frame with blue corner brackets,
-// left column). The white cover sits strictly between the bracket arms:
-//   top arm ends y=687, bottom arm starts y=1024, sample QR black = 149..450 x 711..1016
+// left column). The zone behind the QR is NOT white — it is the card's own pale
+// blue surface, so we cover ONLY the baked-in sample QR's black modules and
+// rebuild that surface underneath by inverse-distance blending of the pixels
+// just outside the cover. The patch is then invisible (no photo-frame edge).
 const CARD_W = 1254;
-const COVER = { x: 128, y: 689, w: 341, h: 334 }; // white cover over the baked-in sample QR
+const SAMPLE = { x: 149, y: 711, w: 301, h: 306 }; // baked-in sample QR (black modules)
+const FEATHER = 4;
+const COVER = { x: SAMPLE.x - FEATHER, y: SAMPLE.y - FEATHER, w: SAMPLE.w + 2 * FEATHER, h: SAMPLE.h + 2 * FEATHER }; // only pixels replaced
 const QR_CENTER = { x: 297, y: 856 }; // centered in the bracket frame (113..481 x 677..1036)
+
+// Reconstructed background patch — depends only on the template, so it is
+// computed once per server instance and cached.
+let patchPromise = null;
+function getBackgroundPatch() {
+  if (!patchPromise) {
+    patchPromise = (async () => {
+      const base = await sharp(CARD_PATH).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      const w = base.info.width, ch = base.info.channels;
+      const px = (x, y) => { const i = (y * w + x) * ch; return [base.data[i], base.data[i + 1], base.data[i + 2]]; };
+      const cw = COVER.w, chh = COVER.h;
+      const SX = COVER.x - 4, EX = COVER.x + cw + 3, SY = COVER.y - 4, EY = COVER.y + chh + 3;
+      const cL = [], cR = [], cT = [], cB = [];
+      for (let yy = 0; yy < chh; yy++) { cL.push(px(SX, COVER.y + yy)); cR.push(px(EX, COVER.y + yy)); }
+      for (let xx = 0; xx < cw; xx++) { cT.push(px(COVER.x + xx, SY)); cB.push(px(COVER.x + xx, EY)); }
+      // inverse-distance-squared blend of the four directional samples: matches
+      // the zone's radial glow (brighter towards the middle, softer at corners)
+      const patch = Buffer.alloc(cw * chh * 3);
+      for (let yy = 0; yy < chh; yy++) {
+        const dT = yy + 5, dB = chh - yy + 4;
+        for (let xx = 0; xx < cw; xx++) {
+          const dst = [xx + 5, cw - xx + 4, dT, dB];
+          const s = [cL[yy], cR[yy], cT[xx], cB[xx]];
+          const o = (yy * cw + xx) * 3;
+          for (let c = 0; c < 3; c++) {
+            let sw = 0, sv = 0;
+            for (let k = 0; k < 4; k++) { const wt = 1 / (dst[k] * dst[k]); sv += wt * s[k][c]; sw += wt; }
+            patch[o + c] = Math.round(sv / sw);
+          }
+        }
+      }
+      return sharp(patch, { raw: { width: cw, height: chh, channels: 3 } }).png().toBuffer();
+    })().catch((e) => { patchPromise = null; throw e; });
+  }
+  return patchPromise;
+}
 
 async function resolveQrUrl(ref, requestBase) {
   const n = parseInt(String(ref || ""), 10);
@@ -51,7 +91,8 @@ export async function GET(req) {
   try {
     // clean, minimal QR: short permanent URL, ECC level M (fewer modules than
     // H), integer pixel-per-module scaling, pure black on TRANSPARENT background
-    // (the white cover supplies the white background + generous quiet zone).
+    // (the card's own surface supplies the light background + generous quiet
+    // zone, so the code blends into the card with no visible image boundary).
     const { errorCorrectionLevel: ECC } = { errorCorrectionLevel: "M" };
     const modulesCount = QRCode.create(link, { errorCorrectionLevel: ECC }).modules.size;
     const usable = Math.min(COVER.w, COVER.h) - 44; // quiet zone ≈22px on each side
@@ -63,13 +104,13 @@ export async function GET(req) {
       margin: 0,
       color: { dark: "#000000ff", light: "#00000000" },
     });
-    const whitePatch = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${COVER.w}" height="${COVER.h}"><rect width="100%" height="100%" fill="#ffffff"/></svg>`);
+    const patchPng = await getBackgroundPatch();
     const qrSquare = await sharp(qrPng).png().toBuffer();
     const left = QR_CENTER.x - Math.round(side / 2);
     const top = QR_CENTER.y - Math.round(side / 2);
     let card = await sharp(CARD_PATH)
       .composite([
-        { input: whitePatch, left: COVER.x, top: COVER.y },
+        { input: patchPng, left: COVER.x, top: COVER.y },
         { input: qrSquare, left, top },
       ])
       .png()
