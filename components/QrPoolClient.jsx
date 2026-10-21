@@ -48,12 +48,12 @@ export default function QrPoolClient({ initialQrs, shops, demo }) {
 
   async function generateOne() {
     if (demo) {
-      const code = newCode(8);
+      const code = newCode();
       setQrs((p) => [...p, { id: `qr-${Date.now()}`, code, shop_id: null, label: "Generated", type: "qr", scans_count: 0, is_active: true, created_at: new Date().toISOString() }]);
       return;
     }
     setBusy("new");
-    const code = newCode(8);
+    const code = newCode();
     const supabase = createClient();
     const { data, error } = await supabase.from("qr_codes").insert({ code, label: "Generated", type: "qr" }).select("*").single();
     if (error) alert(error.message);

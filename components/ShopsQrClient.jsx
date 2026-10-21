@@ -95,7 +95,7 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
   async function generateOne() {
     setBusy("new");
     setErr("");
-    const code = newCode(8);
+    const code = newCode();
     if (demo) {
       const local = [{ id: `qr-${Date.now()}`, code, shop_id: `shop-${Date.now()}`, label: "Generated", type: "qr", scans_count: 0, is_active: true, created_at: new Date().toISOString() }];
       setShops((p) => [...p, { id: `shop-${Date.now()}`, name: "Untitled listing", slug: `listing-${code}`, google_review_url: "" }]);
