@@ -68,7 +68,7 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
   function pickFile(f) {
     setFileErr("");
     if (!f) return;
-    if (f.size > 2 * 1024 * 1024) { setFileErr("Image must be 2 MB or smaller"); return; }
+    if (f.size > 5 * 1024 * 1024) { setFileErr("Image must be 5 MB or smaller"); return; }
     if (!["image/png", "image/jpeg", "image/webp"].includes(f.type)) { setFileErr("Only PNG, JPG or WebP images are allowed"); return; }
     setLogoFile(f);
     if (logoPreview && logoPreview.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
@@ -146,7 +146,7 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
 
   async function uploadLogo(shopId) {
     if (!logoFile) return logoPreview || null;
-    if (logoFile.size > 2 * 1024 * 1024) throw new Error("Logo must be ≤2 MB");
+    if (logoFile.size > 5 * 1024 * 1024) throw new Error("Logo must be ≤5 MB");
     if (!["image/png", "image/jpeg", "image/webp"].includes(logoFile.type)) throw new Error("Logo must be PNG/JPG/WebP");
     const supabase = createClient();
     const ext = logoFile.name.split(".").pop() || "png";
@@ -382,7 +382,7 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
           )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-textPrimary">{dragOver ? "Drop to upload" : "Drag & drop your image here"}</p>
-            <p className="mt-0.5 text-[11px] text-textSecondary">or click to browse — PNG, JPG or WebP, up to 2 MB</p>
+            <p className="mt-0.5 text-[11px] text-textSecondary">or click to browse — PNG, JPG or WebP, up to 5 MB</p>
           </div>
         </div>
         {fileErr && <p className="mt-1.5 text-[11px] font-semibold text-googleRed">{fileErr}</p>}
@@ -396,13 +396,13 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
       {err && <p className="rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-xs font-medium text-googleRed">{err}</p>}
 
       <div className="sticky bottom-4 z-20 mt-6">
-        <div className="flex items-center gap-2 rounded-2xl bg-textPrimary p-2 shadow-xl">
+        <div className="flex items-center gap-2 rounded-2xl bg-googleBlue p-2 shadow-lg shadow-googleBlue/30">
           {!embedded && (
-            <button type="button" onClick={() => history.back()} className="shrink-0 rounded-xl bg-white/10 px-5 py-3 text-sm font-semibold text-white hover:bg-white/15">
+            <button type="button" onClick={() => history.back()} className="shrink-0 rounded-xl bg-white/15 px-5 py-3 text-sm font-semibold text-white hover:bg-white/25">
               Cancel
             </button>
           )}
-          <button disabled={loading} className="flex-1 rounded-xl bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/20 disabled:opacity-50">
+          <button disabled={loading} className="flex-1 rounded-xl bg-white/15 px-5 py-3 text-sm font-bold text-white hover:bg-white/25 disabled:opacity-50">
             {loading ? "Saving..." : editing ? "Save changes" : "Create shop"}
           </button>
         </div>

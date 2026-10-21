@@ -27,8 +27,13 @@ export default async function ReviewPage({ qrref, shopref }) {
   const demo = isDemoMode();
   let qr = null;
 
-  if (/^QR(\d+)$/i.test(qrref || "")) {
-    const n = parseInt(String(qrref).slice(2), 10);
+  // /r/Radha<n> (canonical) and legacy /r/QR<n> both resolve card n positionally;
+  // literal codes (e.g. a hand-made link) resolve by exact code column match.
+  let legacyQrLink = false;
+  if (/^(Radha|QR)(\d+)$/i.test(qrref || "")) {
+    const m = String(qrref).match(/^(Radha|QR)(\d+)$/i);
+    legacyQrLink = /^qr$/i.test(m[1]);
+    const n = parseInt(m[2], 10);
     if (Number.isFinite(n) && n >= 1) {
       if (demo) qr = withQrNumbers(getDemoQrs()).find((q) => q.qrNum === n) || null;
       else {
@@ -37,8 +42,8 @@ export default async function ReviewPage({ qrref, shopref }) {
         qr = withQrNumbers(rows || []).find((q) => q.qrNum === n) || null;
       }
     }
-    // canonical URL has no shop name — anything after /r/QR<n>/ is dropped
-    if (qr && shopref) redirect(qrLinkUrl(qr));
+    // canonical URL has no shop name — anything after /r/Radha<n>/ is dropped
+    if (qr && (shopref || legacyQrLink)) redirect(qrLinkUrl(qr));
   } else if (qrref) {
     if (demo) qr = getDemoQrByCode(qrref) || null;
     else {
@@ -49,12 +54,12 @@ export default async function ReviewPage({ qrref, shopref }) {
     if (qr && shopref) {
       if (demo) {
         const n = withQrNumbers(getDemoQrs()).findIndex((q) => q.id === qr.id) + 1;
-        redirect(`/r/QR${n}`);
+        redirect(`/r/Radha${n}`);
       }
       const admin = createAdminClient();
       const { data: rows } = await admin.from("qr_codes").select("*").order("created_at", { ascending: true });
       const n = withQrNumbers(rows || []).findIndex((q) => q.id === qr.id) + 1;
-      redirect(`/r/QR${n}`);
+      redirect(`/r/Radha${n}`);
     }
   }
   if (!qr) return notFound();

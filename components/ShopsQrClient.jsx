@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { qrLinkUrl, withQrNumbers, newCode, CARD_IMAGE_VERSION } from "@/lib/qr";
+import { qrLinkUrl, withQrNumbers, newCode } from "@/lib/qr";
 import ShopForm from "@/components/ShopForm";
 import Toast from "@/components/Toast";
 
@@ -38,6 +38,20 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
   useEffect(() => { setQrs(initialQrs || []); }, [initialQrs]);
 
   const numbered = withQrNumbers(qrs);
+
+  // dashboard search: shop name, QR number (1, 2, 3...), the Radha link text
+  // on the card (/r/Radha1), or the card's own code string
+  const [qSearch, setQSearch] = useState("");
+  const filtered = qSearch.trim()
+    ? numbered.filter((q) => {
+        const s = qSearch.trim().toLowerCase();
+        const shop = shops.find((x) => x.id === q.shop_id);
+        return [shop?.name || "", String(q.qrNum), `QR${q.qrNum}`, `Radha${q.qrNum}`, q.code || ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(s);
+      })
+    : numbered;
   const openQr = numbered.find((q) => q.id === openId) || null;
   const openShop = openQr ? shops.find((s) => s.id === openQr.shop_id) || null : null;
   const isUntouched = openQr && (!openShop || !openShop.google_review_url);
@@ -95,7 +109,7 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
   async function generateOne() {
     setBusy("new");
     setErr("");
-    const code = newCode();
+    const code = newCode(8);
     if (demo) {
       const local = [{ id: `qr-${Date.now()}`, code, shop_id: `shop-${Date.now()}`, label: "Generated", type: "qr", scans_count: 0, is_active: true, created_at: new Date().toISOString() }];
       setShops((p) => [...p, { id: `shop-${Date.now()}`, name: "Untitled listing", slug: `listing-${code}`, google_review_url: "" }]);
@@ -151,10 +165,26 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
       </div>
 
       {err && <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-googleRed">{err}</p>}
+
       {demo && <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">Demo mode — new QRs are local only. Connect Supabase to persist.</p>}
 
+      <div className="mt-4 flex items-center gap-2 rounded-xl border border-cardBorder bg-white px-3.5 py-2.5">
+        <span className="material-symbols-rounded shrink-0 text-textSecondary" style={{ fontSize: 20 }}>search</span>
+        <input
+          value={qSearch}
+          onChange={(e) => setQSearch(e.target.value)}
+          placeholder="Search — shop name, QR2, Radha2, card code..."
+          className="w-full bg-transparent text-sm text-textPrimary outline-none placeholder:text-textSecondary/60"
+        />
+        {qSearch && (
+          <button onClick={() => setQSearch("")} className="shrink-0 rounded-full p-1 text-textSecondary hover:bg-surface" title="Clear">
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>close</span>
+          </button>
+        )}
+      </div>
+
       <div className="mt-5 space-y-3">
-        {numbered.map((q) => {
+        {filtered.map((q) => {
           const shop = shops.find((s) => s.id === q.shop_id);
           const notSetUp = shop && !shop.google_review_url;
           return (
@@ -200,7 +230,8 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
             </div>
           );
         })}
-        {numbered.length === 0 && <p className="py-10 text-center text-sm text-textSecondary">No QR cards yet.</p>}
+        {filtered.length === 0 &&
+          <p className="py-10 text-center text-sm text-textSecondary">{numbered.length === 0 ? "No QR cards yet." : "No cards match that search."}</p>}
       </div>
 
       {/* ---------- Fullscreen: CARD view (QR number click) ---------- */}
@@ -231,14 +262,14 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
           <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
             <div className="mx-auto max-w-md rounded-card border border-cardBorder bg-white p-5">
               <img
-                src={`/api/card/image?qr=${openQr.qrNum}&size=640&v=${CARD_IMAGE_VERSION}`}
+                src={`/api/card/image?qr=${openQr.qrNum}&size=640`}
                 alt={`QR${openQr.qrNum} printed card`}
                 width={640}
                 height={640}
                 className="w-full rounded-xl border border-cardBorder bg-white shadow-sm"
               />
               <a
-                href={`/api/card/image?qr=${openQr.qrNum}&size=1254&v=${CARD_IMAGE_VERSION}`}
+                href={`/api/card/image?qr=${openQr.qrNum}&size=1254`}
                 download={`QR${openQr.qrNum}-card.png`}
                 className="mt-4 flex items-center justify-center gap-1.5 rounded-full bg-textPrimary px-4 py-2.5 text-xs font-bold text-white hover:opacity-90"
               >
@@ -286,7 +317,7 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                   {openQr.is_active ? "Deactivate card" : "Activate card"}
                 </button>
                 <a
-                  href={`/r/${openQr.code}`}
+                  href={qrLinkUrl(openQr)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 rounded-full border border-cardBorder bg-white px-4 py-2 text-xs font-semibold text-textPrimary hover:bg-surface text-center"
