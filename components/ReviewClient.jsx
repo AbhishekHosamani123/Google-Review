@@ -12,10 +12,21 @@ import Toast from "@/components/Toast";
 import HelpModal from "@/components/HelpModal";
 
 function resolveKeywords(shop) {
-  if (shop.keywords && Array.isArray(shop.keywords) && shop.keywords.length) {
-    return shop.keywords.map((label, i) => ({ id: `custom-${i}`, label, phrase: label.toLowerCase() }));
-  }
-  return getPresetKeywords(shop.category);
+  const hasCustom = shop.keywords && Array.isArray(shop.keywords) && shop.keywords.length;
+  const raw = hasCustom
+    ? shop.keywords.map((label) => ({ label, phrase: String(label).toLowerCase() }))
+    : getPresetKeywords(shop.category) || [];
+  // every chip needs a UNIQUE id — category presets are defined label-only, and
+  // undefined ids made every chip select/deselect together
+  const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  return raw
+    .map((k) => ({ label: String(k.label ?? ""), phrase: String(k.phrase ?? k.label ?? "").toLowerCase() }))
+    .filter((k) => k.label)
+    .map((k, i) => ({
+      id: k.id || `kw-${i}-${slug(k.label)}`,
+      label: k.label,
+      phrase: k.phrase,
+    }));
 }
 
 export default function ReviewClient({ shop, qr }) {
