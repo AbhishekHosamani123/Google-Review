@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { getPresetKeywords } from "@/lib/reviews/keywords";
 import { generateReview } from "@/lib/reviews/templates";
 import { DEFAULT_HERO } from "@/lib/config";
+import { normalizeInstagramUrl, normalizeWhatsAppPhone } from "@/lib/social";
 import { hasScanRecord, markScanRecord } from "@/lib/scanDedup";
 import StarRating from "@/components/StarRating";
 import KeywordChips from "@/components/KeywordChips";
@@ -11,8 +12,29 @@ import ReviewPreview from "@/components/ReviewPreview";
 import Toast from "@/components/Toast";
 import HelpModal from "@/components/HelpModal";
 
-function resolveKeywords(shop) {
-  const hasCustom = shop.keywords && Array.isArray(shop.keywords) && shop.keywords.length;
+// Small, consistent brand icons (FontAwesome-style glyphs — generic shapes).
+// Sized by the parent button; inherit color via currentColor.
+function InstagramIcon() {
+  return (
+    <svg viewBox="0 0 448 512" width="16" height="16" fill="currentColor" aria-hidden="true">
+      <path d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.5-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8zM398.8 388c-7.8 19.6-22.9 34.7-42.6 42.6-29.5 11.7-99.5 9-132.1 9s-102.7 2.6-132.1-9c-19.6-7.8-34.7-22.9-42.6-42.6-11.7-29.5-9-99.5-9-132.1s-2.6-102.7 9-132.1c7.8-19.6 22.9-34.7 42.6-42.6 29.5-11.7 99.5-9 132.1-9s102.7-2.6 132.1 9c19.6 7.8 34.7 22.9 42.6 42.6 11.7 29.5 9 99.5 9 132.1s2.7 102.7-9 132.1z" />
+    </svg>
+  );
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 448 512" width="16" height="16" fill="currentColor" aria-hidden="true">
+      <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zM223.9 438.7c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-53.6-33.4-66.7-54.7-3.3-5.6-1.4-8.7 2.5-11.7 4.2-3.1 8.5-7.4 12.8-11.1 1.9-1.7 3.5-3.6 5.3-5.4 2.3-2.4 3.1-4.2 4.6-7.2 1.1-2.5.6-4.7-.3-6.7-.9-1.9-8.3-20-11.3-27.3-3-7.1-6.1-7.6-9.3-7.5h-8.2c-2.9 0-7.6 1.1-11.5 5.4-3.9 4.3-15 14.5-15 35.5 0 21 15.3 41.2 17.5 44.6 2.2 3.4 30 45.8 72.6 64.2 10.1 4.4 18 7 24.2 8.9 10.2 3.2 19.5 2.8 26.8 1.7 8.2-1.2 26.9-11 30.8-21.7 3.8-10.7 3.8-19.9 2.7-21.7-1.1-2-3.9-3.2-8.3-5z" />
+    </svg>
+  );
+}
+
+// Shared styling for the compact social/contact buttons on the review page
+const SOCIAL_BTN =
+  "inline-flex h-9 w-9 items-center justify-center rounded-full border border-cardBorder bg-white text-textSecondary transition hover:scale-105 hover:bg-chipSelected hover:text-textPrimary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-googleBlue focus-visible:ring-offset-2 active:scale-95";
+
+function resolveKeywords(shop) {  const hasCustom = shop.keywords && Array.isArray(shop.keywords) && shop.keywords.length;
   const raw = hasCustom
     ? shop.keywords.map((label) => ({ label, phrase: String(label).toLowerCase() }))
     : getPresetKeywords(shop.category) || [];
@@ -121,6 +143,13 @@ export default function ReviewClient({ shop, qr }) {
 
   const hero = shop.logo_url || DEFAULT_HERO;
 
+// Public social links — rendered only when a valid value exists; anything
+// disabled/absent/invalid renders nothing (no empty placeholders).
+const instagramHref = normalizeInstagramUrl(shop.instagram_url);
+const wa = normalizeWhatsAppPhone(shop.whatsapp_phone);
+const whatsappHref = wa.ok ? wa.url : null;
+const hasSocial = !!(instagramHref || whatsappHref);
+
   return (
     <div className="min-h-screen bg-surface">
       <header className="sticky top-0 z-30 border-b border-cardBorder bg-white/90 backdrop-blur">
@@ -165,6 +194,34 @@ export default function ReviewClient({ shop, qr }) {
               Tap what you liked, pick a tone, and we&apos;ll draft your review — edit anything, then post to Google.
               <span className="font-medium text-textPrimary"> Genuine visits only.</span>
             </p>
+            {hasSocial && (
+              <div className="mt-3 flex items-center gap-2 border-t border-cardBorder pt-3">
+                {instagramHref && (
+                  <a
+                    href={instagramHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`${shop.name} on Instagram`}
+                    title="Instagram"
+                    className={SOCIAL_BTN}
+                  >
+                    <InstagramIcon />
+                  </a>
+                )}
+                {whatsappHref && (
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Chat with ${shop.name} on WhatsApp`}
+                    title="WhatsApp"
+                    className={SOCIAL_BTN}
+                  >
+                    <WhatsAppIcon />
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

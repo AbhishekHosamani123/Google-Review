@@ -16,6 +16,9 @@ create table if not exists public.shops (
   ai_enabled boolean not null default true,
   keywords jsonb,
   is_active boolean not null default true,
+  -- optional social links (see add-social-links.sql for existing installs)
+  instagram_url text,
+  whatsapp_phone text, -- international digits, e.g. 919876543210 (wa.me/<digits>)
   created_at timestamptz not null default now()
 );
 create index if not exists shops_slug_idx on public.shops (slug);

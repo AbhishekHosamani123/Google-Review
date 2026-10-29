@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isValidGoogleReviewUrl } from "@/lib/qr";
+import { normalizeInstagramUrl, normalizeWhatsAppPhone } from "@/lib/social";
 import { CATEGORY_OPTIONS, CATEGORY_PRESETS, moreKeywords } from "@/lib/reviews/keywords";
 
 // True when the URL already opens Google's write-review dialog in one tap —
@@ -63,6 +64,14 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
   const [logoPreview, setLogoPreview] = useState(shop?.logo_url || "");
   const [dragOver, setDragOver] = useState(false);
   const [fileErr, setFileErr] = useState("");
+
+  // Optional social links — each has its own independent toggle so either one
+  // can exist alone. Toggling OFF clears the saved value on save (removes the
+  // link), toggling ON reveals the input and keeps the saved value for editing.
+  const [addInstagram, setAddInstagram] = useState(!!shop?.instagram_url);
+  const [instagramUrl, setInstagramUrl] = useState(shop?.instagram_url || "");
+  const [addWhatsApp, setAddWhatsApp] = useState(!!shop?.whatsapp_phone);
+  const [whatsappPhone, setWhatsappPhone] = useState(shop?.whatsapp_phone ? `+${shop.whatsapp_phone}` : "");
 
   // shared file picker for the drag-drop zone + the browse input
   function pickFile(f) {
@@ -168,6 +177,19 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
     if (ownerPhone.trim() && !/^[+()0-9\-\s]{4,20}$/.test(ownerPhone.trim())) {
       setErr("Owner phone number looks wrong — use digits with optional +, spaces or dashes"); return;
     }
+    // social links — optional, validated only when filled in
+    const igNormalized = normalizeInstagramUrl(instagramUrl);
+    if (addInstagram && instagramUrl.trim() && !igNormalized) {
+      setErr("Instagram URL must be a valid profile link, e.g. https://www.instagram.com/yourbusiness/");
+      return;
+    }
+    const wa = normalizeWhatsAppPhone(whatsappPhone);
+    if (addWhatsApp && whatsappPhone.trim() && !wa.ok) {
+      setErr(wa.error === "digit count"
+        ? "WhatsApp number looks wrong — include the full number with country code, e.g. +91 98765 43210"
+        : "WhatsApp number must contain digits only");
+      return;
+    }
     setLoading(true);
     try {
       // normalize the Google link before storing: shorteners (share.google,
@@ -199,6 +221,13 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
         payload.owner_name = ownerName.trim() || null;
         payload.owner_phone = ownerPhone.trim() || null;
       }
+      // social fields — same guarded-send pattern: saves on databases that
+      // haven't got the columns yet keep working, and toggling a platform OFF
+      // stores null for that platform only (the other one's data stays intact)
+      if (addInstagram || addWhatsApp || shop?.instagram_url || shop?.whatsapp_phone) {
+        payload.instagram_url = addInstagram && igNormalized ? igNormalized : null;
+        payload.whatsapp_phone = addWhatsApp && wa.ok ? wa.phone : null;
+      }
       let shopId = shop?.id;
       let data, error;
       if (editing) {
@@ -227,7 +256,9 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
       setErr(
         /owner_name|owner_phone/.test(msg) && /column|schema cache|could not find/i.test(msg)
           ? "Database upgrade pending — open Supabase → SQL Editor, run the owner-fields script, then press Save again."
-          : msg
+          : /instagram_url|whatsapp_phone/.test(msg) && /column|schema cache|could not find/i.test(msg)
+            ? "Database upgrade pending — open Supabase → SQL Editor, run supabase/add-social-links.sql, then press Save again."
+            : msg
       );
       setLoading(false);
     }
@@ -276,6 +307,47 @@ export default function ShopForm({ shop, embedded = false, onSaved }) {
           <input type="tel" value={ownerPhone} onChange={(e) => setOwnerPhone(e.target.value)} placeholder="e.g. +91 98765 43210" className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none" />
         </label>
         <span className="text-[11px] text-textSecondary sm:col-span-2">Only you can see this — it stays with the shop record.</span>
+      </div>
+
+      {/* Social links — two independent optional toggles */}
+      <div className="rounded-xl border border-cardBorder bg-surface p-4">
+        <span className="text-xs font-bold text-textPrimary">Social links (optional)</span>
+        <p className="mt-0.5 text-[11px] text-textSecondary">Shown as small icons on your public review page.</p>
+
+        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-textPrimary">
+          <input type="checkbox" checked={addInstagram} onChange={(e) => setAddInstagram(e.target.checked)} className="h-4 w-4 rounded border-cardBorder text-googleBlue" />
+          Add Instagram
+        </label>
+        {addInstagram && (
+          <label className="mt-2 block">
+            <span className="text-xs font-semibold text-textPrimary">Instagram profile URL</span>
+            <input
+              type="url"
+              value={instagramUrl}
+              onChange={(e) => setInstagramUrl(e.target.value)}
+              placeholder="https://www.instagram.com/yourbusiness/"
+              className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none focus:ring-2 focus:ring-googleBlue/20"
+            />
+          </label>
+        )}
+
+        <label className="mt-3 flex items-center gap-2 text-sm font-medium text-textPrimary">
+          <input type="checkbox" checked={addWhatsApp} onChange={(e) => setAddWhatsApp(e.target.checked)} className="h-4 w-4 rounded border-cardBorder text-googleBlue" />
+          Add WhatsApp
+        </label>
+        {addWhatsApp && (
+          <label className="mt-2 block">
+            <span className="text-xs font-semibold text-textPrimary">WhatsApp phone number</span>
+            <input
+              type="tel"
+              value={whatsappPhone}
+              onChange={(e) => setWhatsappPhone(e.target.value)}
+              placeholder="e.g. +91 98765 43210"
+              className="mt-1 w-full rounded-xl border border-cardBorder bg-white px-3.5 py-2.5 text-sm focus:border-googleBlue focus:outline-none focus:ring-2 focus:ring-googleBlue/20"
+            />
+            <span className="mt-1 block text-[11px] text-textSecondary">Include the country code — bare 10-digit numbers are saved as +91 automatically.</span>
+          </label>
+        )}
       </div>
 
       <label className="block">
