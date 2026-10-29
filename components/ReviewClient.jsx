@@ -43,10 +43,12 @@ const INSTAGRAM_GRADIENT = "linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #9
 
 const STAR_D = "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z";
 
-function GoldStar({ size = 14, tilt = 0 }) {
+// Solid Google-gold star with a deeper gold edge so the icon nose reads crisply
+// at small sizes instead of melting into the white tile.
+function GoldStar({ size = 16 }) {
   return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" style={{ transform: tilt ? `rotate(${tilt}deg)` : undefined }}>
-      <path d={STAR_D} fill="#FBBC04" />
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" className="block">
+      <path d={STAR_D} fill="#FBBC04" stroke="#F9AB00" strokeWidth="1.4" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -54,31 +56,32 @@ function GoldStar({ size = 14, tilt = 0 }) {
 // Sparkle "+" stroke in a brand color (little hand-drawn accents around the tile)
 function Sparkle({ className, color, size = 12 }) {
   return (
-    <svg viewBox="0 0 12 12" width={size} height={size} aria-hidden="true" className={`absolute ${className}`}>
-      <path d="M6 0v12M0 6h12" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+    <svg viewBox="0 0 14 14" width={size} height={size} aria-hidden="true" className={`absolute ${className}`}>
+      <path d="M7 1.5v11M1.5 7h11" stroke={color} strokeWidth="2.6" strokeLinecap="round" />
     </svg>
   );
 }
 
-// Intro-card illustration — white tile, Google G above a slightly playful row
-// of five gold stars, with brand-colored sparkles around it.
+// Intro-card illustration — a tilted white tile with the Google G above an
+// arched row of five gold stars, framed by tiny brand-colored sparkles.
 function GoogleStarsTile() {
   return (
-    <div className="relative shrink-0" aria-hidden="true">
-      <div className="grid h-[88px] w-[104px] rotate-2 place-items-center gap-1.5 rounded-2xl border border-cardBorder bg-white shadow-card sm:h-[96px] sm:w-[116px]">
-        <GoogleG size={22} />
-        <span className="flex items-center gap-0.5">
-          <GoldStar size={14} tilt={-6} />
-          <GoldStar size={16} tilt={-3} />
-          <GoldStar size={18} />
-          <GoldStar size={16} tilt={3} />
-          <GoldStar size={14} tilt={6} />
+    <div className="relative shrink-0 select-none" aria-hidden="true">
+      <div className="flex h-[96px] w-[116px] rotate-2 flex-col items-center justify-center gap-2.5 rounded-2xl border border-cardBorder bg-white px-2 py-3 shadow-card sm:h-[104px] sm:w-[128px]">
+        <GoogleG size={26} />
+        {/* bottom-aligned sizes give the row a deliberate, symmetrical arch */}
+        <span className="flex items-end justify-center gap-[3px]">
+          <GoldStar size={15} />
+          <GoldStar size={19} />
+          <GoldStar size={23} />
+          <GoldStar size={19} />
+          <GoldStar size={15} />
         </span>
       </div>
-      <Sparkle className="-left-2 top-1" color="#EA4335" />
-      <Sparkle className="-right-2 top-2" color="#34A853" />
-      <Sparkle className="-right-1 bottom-2" color="#FBBC04" size={10} />
-      <Sparkle className="left-3 -bottom-1.5" color="#DADCE0" size={9} />
+      <Sparkle className="-left-2.5 top-1.5" color="#EA4335" size={13} />
+      <Sparkle className="-right-2.5 top-4" color="#34A853" size={13} />
+      <Sparkle className="-right-1.5 bottom-3" color="#FBBC04" size={10} />
+      <Sparkle className="left-4 -bottom-2" color="#4285F4" size={10} />
     </div>
   );
 }
