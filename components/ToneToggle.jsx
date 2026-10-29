@@ -12,20 +12,29 @@ export default function ToneToggle({ value, onChange }) {
             onClick={() => onChange(t.id)}
             aria-pressed={active}
             className={[
-              "rounded-xl border px-3 py-3 text-left transition-all",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-googleBlue",
+              "relative rounded-xl border px-3 py-3.5 text-left transition-all",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-googleBlue focus-visible:ring-offset-1",
               active
-                ? "bg-chipSelected border-googleBlue shadow-sm"
-                : "bg-white border-cardBorder hover:border-googleBlue/30",
+                ? "border-googleBlue bg-chipSelected shadow-sm"
+                : "border-cardBorder bg-white hover:border-googleBlue/30",
             ].join(" ")}
           >
-            <span className="flex items-center gap-1.5">
-              <span className="material-symbols-rounded" style={{ fontSize: 18, color: active ? "#4285F4" : "#5F6368" }}>
-                {t.icon}
-              </span>
-              <span className={`text-sm font-semibold ${active ? "text-googleBlue" : "text-textPrimary"}`}>{t.label}</span>
+            <span
+              className={`material-symbols-rounded absolute right-1.5 top-1.5 transition-all ${active ? "scale-100 text-[#1A73E8]" : "scale-0 text-transparent"}`}
+              style={{ fontSize: 17, fontVariationSettings: "'FILL' 1" }}
+              aria-hidden="true"
+            >
+              check_circle
             </span>
-            <span className="mt-1 block text-xs text-textSecondary">{t.desc}</span>
+            <span
+              className={`material-symbols-rounded block ${active ? "text-googleBlue" : "text-textSecondary"}`}
+              style={{ fontSize: 22 }}
+              aria-hidden="true"
+            >
+              {t.icon}
+            </span>
+            <span className={`mt-1.5 block text-sm font-bold ${active ? "text-[#1A73E8]" : "text-textPrimary"}`}>{t.label}</span>
+            <span className="mt-0.5 block text-xs text-textSecondary">{t.desc}</span>
           </button>
         );
       })}

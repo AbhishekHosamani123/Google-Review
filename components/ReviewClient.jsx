@@ -6,6 +6,7 @@ import { DEFAULT_HERO } from "@/lib/config";
 import { normalizeInstagramUrl, normalizeWhatsAppPhone } from "@/lib/social";
 import { hasScanRecord, markScanRecord } from "@/lib/scanDedup";
 import StarRating from "@/components/StarRating";
+import GoogleG from "@/components/GoogleG";
 import KeywordChips from "@/components/KeywordChips";
 import ToneToggle from "@/components/ToneToggle";
 import ReviewPreview from "@/components/ReviewPreview";
@@ -39,6 +40,57 @@ const INSTAGRAM_BTN = `${SOCIAL_BTN_BASE} hover:brightness-110 focus-visible:rin
 const WHATSAPP_BTN = `${SOCIAL_BTN_BASE} bg-[#25D366] hover:brightness-105 focus-visible:ring-[#25D366]`;
 // Instagram's official five-stop brand gradient (catalog spec)
 const INSTAGRAM_GRADIENT = "linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5)";
+
+const STAR_D = "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z";
+
+function GoldStar({ size = 14, tilt = 0 }) {
+  return (
+    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" style={{ transform: tilt ? `rotate(${tilt}deg)` : undefined }}>
+      <path d={STAR_D} fill="#FBBC04" />
+    </svg>
+  );
+}
+
+// Sparkle "+" stroke in a brand color (little hand-drawn accents around the tile)
+function Sparkle({ className, color, size = 12 }) {
+  return (
+    <svg viewBox="0 0 12 12" width={size} height={size} aria-hidden="true" className={`absolute ${className}`}>
+      <path d="M6 0v12M0 6h12" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// Intro-card illustration — white tile, Google G above a slightly playful row
+// of five gold stars, with brand-colored sparkles around it.
+function GoogleStarsTile() {
+  return (
+    <div className="relative shrink-0" aria-hidden="true">
+      <div className="grid h-[88px] w-[104px] rotate-2 place-items-center gap-1.5 rounded-2xl border border-cardBorder bg-white shadow-card sm:h-[96px] sm:w-[116px]">
+        <GoogleG size={22} />
+        <span className="flex items-center gap-0.5">
+          <GoldStar size={14} tilt={-6} />
+          <GoldStar size={16} tilt={-3} />
+          <GoldStar size={18} />
+          <GoldStar size={16} tilt={3} />
+          <GoldStar size={14} tilt={6} />
+        </span>
+      </div>
+      <Sparkle className="-left-2 top-1" color="#EA4335" />
+      <Sparkle className="-right-2 top-2" color="#34A853" />
+      <Sparkle className="-right-1 bottom-2" color="#FBBC04" size={10} />
+      <Sparkle className="left-3 -bottom-1.5" color="#DADCE0" size={9} />
+    </div>
+  );
+}
+
+// Numbered step coin for the guided flow (Google blue, like the mockup's circles)
+function StepBadge({ n }) {
+  return (
+    <span className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-googleBlue text-xs font-bold text-white shadow-sm" aria-hidden="true">
+      {n}
+    </span>
+  );
+}
 
 function resolveKeywords(shop) {  const hasCustom = shop.keywords && Array.isArray(shop.keywords) && shop.keywords.length;
   const raw = hasCustom
@@ -168,38 +220,73 @@ const hasSocial = !!(instagramHref || whatsappHref);
         </div>
       </header>
 
-      <main className="mx-auto max-w-[640px] px-4 pb-28 pt-6 sm:px-6 sm:pt-8">
+      <main className="mx-auto max-w-[640px] px-4 pb-10 pt-6 sm:px-6 sm:pt-8">
         <div className="overflow-hidden rounded-card border border-cardBorder bg-white shadow-raised" style={{ animation: "fadeUp 300ms ease-out" }}>
-          <div className="relative h-[190px] w-full overflow-hidden bg-surface sm:h-[220px]">
+          <div className="relative h-[210px] w-full overflow-hidden bg-surface sm:h-[230px]">
             <img src={hero} alt={shop.name} className="h-full w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+            {(shop.address || shop.city) && (
+              <div className="absolute right-0 top-0 m-3 flex max-w-[70%] items-start gap-1 rounded-xl bg-black/45 px-2.5 py-1.5 backdrop-blur-sm">
+                <span className="material-symbols-rounded shrink-0 text-white" style={{ fontSize: 15 }}>
+                  location_on
+                </span>
+                <span className="text-[11px] font-medium leading-tight text-white">
+                  {[shop.address, shop.city].filter(Boolean).join(", ")}
+                </span>
+              </div>
+            )}
             <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
-              <h1 className="text-[20px] font-bold leading-none text-white drop-shadow sm:text-[22px]">{shop.name}</h1>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <h1 className="font-serif text-[26px] font-bold leading-none tracking-tight text-white drop-shadow sm:text-[32px]">{shop.name}</h1>
+              {shop.category && (
+                <span className="mt-1.5 block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/75">
+                  · {shop.category} ·
+                </span>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
                 <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-bold text-textPrimary shadow-sm">
                   4.8
                   <span className="material-symbols-rounded" style={{ fontSize: 14, color: "#FBBC04", fontVariationSettings: "'FILL' 1" }}>
                     star
                   </span>
-                  <span className="font-normal text-textSecondary"> - Reviews on Google</span>
+                  <span className="font-normal text-textSecondary">· Reviews on Google</span>
                 </span>
-                {(shop.city || shop.category) && (
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-white/90">
-                    <span className="material-symbols-rounded" style={{ fontSize: 14 }}>
-                      location_on
+                {qr?.scans_count > 0 && (
+                  <>
+                    <span className="hidden text-white/40 sm:inline">|</span>
+                    <span className="text-xs font-medium text-white/90">
+                      Loved by {Number(qr.scans_count).toLocaleString()}+ customers
                     </span>
-                    {[shop.city, shop.category].filter(Boolean).join(" - ")}
-                  </span>
+                  </>
                 )}
               </div>
             </div>
           </div>
-          <div className="px-4 py-4 sm:px-5">
-            <h2 className="text-[18px] font-bold leading-tight text-textPrimary sm:text-[20px]">Loved your visit? Your review takes 10 seconds.</h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-textSecondary">
-              Tap what you liked, pick a tone, and we&apos;ll draft your review — edit anything, then post to Google.
-              <span className="font-medium text-textPrimary"> Genuine visits only.</span>
-            </p>
+          <div className="px-4 py-5 sm:px-6">
+            <div className="flex items-center gap-4">
+              <div className="min-w-0 flex-1">
+                <h2 className="font-serif text-[24px] font-bold leading-tight text-textPrimary sm:text-[28px]">Loved your visit?</h2>
+                <p className="mt-1 text-[15px] font-bold leading-snug text-textPrimary">
+                  Your review takes just <span className="text-googleBlue">10 seconds.</span>
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-textSecondary">
+                  Tap what you liked, pick a tone, and we&apos;ll draft your review — edit anything, then post to Google.
+                  <span className="font-medium text-textPrimary"> Genuine visits only.</span>
+                </p>
+              </div>
+              <GoogleStarsTile />
+            </div>
+
+            <div className="mt-4 border-t border-cardBorder pt-4">
+              <span className="text-xs font-bold uppercase tracking-wide text-textSecondary">Your rating</span>
+              <div className="mt-2">
+                <StarRating value={stars} onChange={setStars} />
+              </div>
+              {stars <= 3 && (
+                <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-800">
+                  Thanks for your honesty. Share what went well and what could improve.
+                </p>
+              )}
+            </div>
             {hasSocial && (
               <div className="mt-3 flex items-center gap-2 border-t border-cardBorder pt-3">
                 {instagramHref && (
@@ -233,32 +320,28 @@ const hasSocial = !!(instagramHref || whatsappHref);
         </div>
 
         <section className="mt-5 rounded-card border border-cardBorder bg-white p-4 shadow-card sm:p-5">
-          <h3 className="text-sm font-bold text-textPrimary">Your rating</h3>
-          <div className="mt-3">
-            <StarRating value={stars} onChange={setStars} />
-          </div>
-          {stars <= 3 && (
-            <p className="mt-3 rounded-xl bg-amber-50 border border-amber-200 px-3 py-2 text-xs leading-relaxed text-amber-800">
-              Thanks for your honesty. Share what went well and what could improve.
-            </p>
-          )}
-        </section>
-
-        <section className="mt-5 rounded-card border border-cardBorder bg-white p-4 shadow-card sm:p-5">
-          <div className="flex items-baseline justify-between">
-            <h3 className="text-sm font-bold text-textPrimary">What did you love?</h3>
+          <div className="flex items-start gap-2.5">
+            <StepBadge n={1} />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-[17px] font-bold leading-tight text-textPrimary">What did you love?</h3>
+              <p className="mt-0.5 text-xs text-textSecondary">Tap up to 5 highlights.</p>
+            </div>
             <span className="text-xs font-medium text-textSecondary">{selected.length}/5 selected</span>
           </div>
-          <p className="mt-1 text-xs text-textSecondary">Tap up to 5 highlights.</p>
-          <div className="mt-4">
+          <div className="mt-4 sm:pl-[38px]">
             <KeywordChips keywords={keywords} selectedIds={selected} onToggle={toggle} />
           </div>
         </section>
 
         <section className="mt-5 rounded-card border border-cardBorder bg-white p-4 shadow-card sm:p-5">
-          <h3 className="text-sm font-bold text-textPrimary">Tone</h3>
-          <p className="mt-1 text-xs text-textSecondary">How should your review sound?</p>
-          <div className="mt-4">
+          <div className="flex items-start gap-2.5">
+            <StepBadge n={2} />
+            <div className="min-w-0 flex-1">
+              <h3 className="text-[17px] font-bold leading-tight text-textPrimary">Tone</h3>
+              <p className="mt-0.5 text-xs text-textSecondary">How should your review sound?</p>
+            </div>
+          </div>
+          <div className="mt-4 sm:pl-[38px]">
             <ToneToggle value={tone} onChange={setTone} />
           </div>
         </section>
@@ -269,16 +352,19 @@ const hasSocial = !!(instagramHref || whatsappHref);
             onClick={doGenerate}
             disabled={!canGenerate}
             className={[
-              "inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-[15px] font-bold shadow-sm transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-googleBlue focus-visible:ring-offset-2",
+              "inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-4 text-[16px] font-bold shadow-card transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-googleBlue focus-visible:ring-offset-2",
               canGenerate
-                ? "bg-googleBlue text-white hover:bg-[#3367D6] active:scale-[0.99]"
-                : "bg-white border border-cardBorder text-textSecondary cursor-not-allowed",
+                ? "bg-[linear-gradient(90deg,#4285F4,#1A73E8)] text-white hover:brightness-105 hover:shadow-cardHover active:scale-[0.99]"
+                : "border border-cardBorder bg-white text-textSecondary cursor-not-allowed",
             ].join(" ")}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 20 }}>
               auto_awesome
             </span>
             Generate my review
+            <span className="material-symbols-rounded" style={{ fontSize: 20 }}>
+              arrow_forward
+            </span>
           </button>
           {!canGenerate && !hasGenerated && <p className="mt-2 text-center text-xs text-textSecondary">Select at least one highlight above to generate.</p>}
           {hasGenerated && (
@@ -291,48 +377,25 @@ const hasSocial = !!(instagramHref || whatsappHref);
           )}
         </div>
 
-        {hasGenerated && (
-          <div className="mt-6" style={{ animation: "fadeUp 250ms ease-out" }}>
-            <ReviewPreview text={review} setText={setReview} onRegenerate={doGenerate} mascotSrc={mascotSrc} />
-          </div>
-        )}
-
-        {hasGenerated && (
-          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-cardBorder bg-white/95 backdrop-blur">
-            <div className="mx-auto flex max-w-[640px] gap-3 px-4 py-3 sm:px-6">
-              <button
-                type="button"
-                onClick={doGenerate}
-                className="hidden sm:inline-flex items-center justify-center gap-1.5 rounded-full border border-cardBorder bg-white px-5 py-3 text-sm font-semibold text-textPrimary hover:bg-surface"
-              >
-                <span className="material-symbols-rounded" style={{ fontSize: 18 }}>
-                  refresh
-                </span>
-                Regenerate
-              </button>
-              <button
-                type="button"
-                onClick={copyAndOpen}
-                disabled={!review.trim()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-full bg-googleBlue px-6 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-[#3367D6] disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <span className="material-symbols-rounded" style={{ fontSize: 20 }}>
-                  content_copy
-                </span>
-                Copy and open Google Reviews
-                <span className="material-symbols-rounded" style={{ fontSize: 18 }}>
-                  open_in_new
-                </span>
-              </button>
-            </div>
-            <p className="pb-2 text-center text-[11px] text-textSecondary">
-              Your draft is copied for you — just paste it on Google and tap <b className="text-textPrimary">Post</b>.
-            </p>
-          </div>
-        )}
+        {hasGenerated && <div className="mt-6" style={{ animation: "fadeUp 250ms ease-out" }}>
+          <ReviewPreview
+            text={review}
+            setText={setReview}
+            onRegenerate={doGenerate}
+            onCopy={copyAndOpen}
+            mascotSrc={mascotSrc}
+          />
+          <p className="mt-2 text-center text-[11px] text-textSecondary">
+            Your draft is copied for you — just paste it on Google and tap <b className="text-textPrimary">Post</b>.
+          </p>
+        </div>}
 
         <footer className="mt-8 border-t border-cardBorder pt-6 pb-2 text-center">
-          <p className="text-xs text-textSecondary">Draft — edit freely before posting on Google.</p>
+          <p className="text-xs leading-relaxed text-textSecondary">
+            Your feedback helps us grow{" "}
+            <span aria-hidden="true">❤️</span> Thank you for supporting{" "}
+            <span className="font-medium text-textPrimary">{shop.name}!</span>
+          </p>
         </footer>
       </main>
       <Toast message={toast} />
