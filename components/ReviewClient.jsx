@@ -6,7 +6,6 @@ import { DEFAULT_HERO } from "@/lib/config";
 import { normalizeInstagramUrl, normalizeWhatsAppPhone } from "@/lib/social";
 import { hasScanRecord, markScanRecord } from "@/lib/scanDedup";
 import StarRating from "@/components/StarRating";
-import GoogleG from "@/components/GoogleG";
 import KeywordChips from "@/components/KeywordChips";
 import ToneToggle from "@/components/ToneToggle";
 import ReviewPreview from "@/components/ReviewPreview";
@@ -40,51 +39,6 @@ const INSTAGRAM_BTN = `${SOCIAL_BTN_BASE} hover:brightness-110 focus-visible:rin
 const WHATSAPP_BTN = `${SOCIAL_BTN_BASE} bg-[#25D366] hover:brightness-105 focus-visible:ring-[#25D366]`;
 // Instagram's official five-stop brand gradient (catalog spec)
 const INSTAGRAM_GRADIENT = "linear-gradient(45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5)";
-
-const STAR_D = "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z";
-
-// Solid Google-gold star with a deeper gold edge so the icon nose reads crisply
-// at small sizes instead of melting into the white tile.
-function GoldStar({ size = 16 }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} aria-hidden="true" className="block">
-      <path d={STAR_D} fill="#FBBC04" stroke="#F9AB00" strokeWidth="1.4" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-// Sparkle "+" stroke in a brand color (little hand-drawn accents around the tile)
-function Sparkle({ className, color, size = 12 }) {
-  return (
-    <svg viewBox="0 0 14 14" width={size} height={size} aria-hidden="true" className={`absolute ${className}`}>
-      <path d="M7 1.5v11M1.5 7h11" stroke={color} strokeWidth="2.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-// Intro-card illustration — a tilted white tile with the Google G above an
-// arched row of five gold stars, framed by tiny brand-colored sparkles.
-function GoogleStarsTile() {
-  return (
-    <div className="relative shrink-0 select-none" aria-hidden="true">
-      <div className="flex h-[96px] w-[116px] rotate-2 flex-col items-center justify-center gap-2.5 rounded-2xl border border-cardBorder bg-white px-2 py-3 shadow-card sm:h-[104px] sm:w-[128px]">
-        <GoogleG size={26} />
-        {/* bottom-aligned sizes give the row a deliberate, symmetrical arch */}
-        <span className="flex items-end justify-center gap-[3px]">
-          <GoldStar size={15} />
-          <GoldStar size={19} />
-          <GoldStar size={23} />
-          <GoldStar size={19} />
-          <GoldStar size={15} />
-        </span>
-      </div>
-      <Sparkle className="-left-2.5 top-1.5" color="#EA4335" size={13} />
-      <Sparkle className="-right-2.5 top-4" color="#34A853" size={13} />
-      <Sparkle className="-right-1.5 bottom-3" color="#FBBC04" size={10} />
-      <Sparkle className="left-4 -bottom-2" color="#4285F4" size={10} />
-    </div>
-  );
-}
 
 // Numbered step coin for the guided flow (Google blue, like the mockup's circles)
 function StepBadge({ n }) {
@@ -265,19 +219,14 @@ const hasSocial = !!(instagramHref || whatsappHref);
             </div>
           </div>
           <div className="px-4 py-5 sm:px-6">
-            <div className="flex items-center gap-4">
-              <div className="min-w-0 flex-1">
-                <h2 className="font-serif text-[24px] font-bold leading-tight text-textPrimary sm:text-[28px]">Loved your visit?</h2>
-                <p className="mt-1 text-[15px] font-bold leading-snug text-textPrimary">
-                  Your review takes just <span className="text-googleBlue">10 seconds.</span>
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-textSecondary">
-                  Tap what you liked, pick a tone, and we&apos;ll draft your review — edit anything, then post to Google.
-                  <span className="font-medium text-textPrimary"> Genuine visits only.</span>
-                </p>
-              </div>
-              <GoogleStarsTile />
-            </div>
+            <h2 className="font-serif text-[26px] font-bold leading-tight text-textPrimary sm:text-[30px]">Loved your visit?</h2>
+            <p className="mt-1.5 text-[16px] font-bold leading-snug text-textPrimary sm:text-[17px]">
+              Your review takes just <span className="text-googleBlue">10 seconds.</span>
+            </p>
+            <p className="mt-2.5 text-sm leading-relaxed text-textSecondary">
+              Tap what you liked, pick a tone, and we&apos;ll draft your review — edit anything, then post to Google.
+              <span className="font-medium text-textPrimary"> Genuine visits only.</span>
+            </p>
 
             <div className="mt-4 border-t border-cardBorder pt-4">
               <span className="text-xs font-bold uppercase tracking-wide text-textSecondary">Your rating</span>

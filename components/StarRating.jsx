@@ -43,7 +43,7 @@ const LABELS = [
 
 export default function StarRating({ value, onChange }) {
   return (
-    <div className="flex items-center gap-1.5" role="radiogroup" aria-label="Your rating">
+    <div className="flex flex-wrap items-center gap-1.5" role="radiogroup" aria-label="Your rating">
       {[1, 2, 3, 4, 5].map((n) => {
         const filled = n <= value;
         return (
