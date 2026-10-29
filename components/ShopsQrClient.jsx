@@ -265,11 +265,11 @@ export default function ShopsQrClient({ shops: initialShops, qrs: initialQrs, de
                 src={`/api/card/image?qr=${openQr.qrNum}&size=640&v=${CARD_IMAGE_VERSION}`}
                 alt={`QR${openQr.qrNum} printed card`}
                 width={640}
-                height={640}
+                height={950}
                 className="w-full rounded-xl border border-cardBorder bg-white shadow-sm"
               />
               <a
-                href={`/api/card/image?qr=${openQr.qrNum}&size=1254&v=${CARD_IMAGE_VERSION}`}
+                href={`/api/card/image?qr=${openQr.qrNum}&size=3087&v=${CARD_IMAGE_VERSION}`}
                 download={`QR${openQr.qrNum}-card.png`}
                 className="mt-4 flex items-center justify-center gap-1.5 rounded-full bg-textPrimary px-4 py-2.5 text-xs font-bold text-white hover:opacity-90"
               >

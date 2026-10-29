@@ -2,7 +2,7 @@
 const nextConfig = {
   // the printed card template must be available to the card-rendering API
   outputFileTracingIncludes: {
-    "/api/card/image": ["./new-card.png"],
+    "/api/card/image": ["./assets/New_Google_Review_Card.png"],
   },
 };
 export default nextConfig;

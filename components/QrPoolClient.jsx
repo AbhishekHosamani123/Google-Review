@@ -48,12 +48,12 @@ export default function QrPoolClient({ initialQrs, shops, demo }) {
 
   async function generateOne() {
     if (demo) {
-      const code = newCode();
+      const code = newCode(8);
       setQrs((p) => [...p, { id: `qr-${Date.now()}`, code, shop_id: null, label: "Generated", type: "qr", scans_count: 0, is_active: true, created_at: new Date().toISOString() }]);
       return;
     }
     setBusy("new");
-    const code = newCode();
+    const code = newCode(8);
     const supabase = createClient();
     const { data, error } = await supabase.from("qr_codes").insert({ code, label: "Generated", type: "qr" }).select("*").single();
     if (error) alert(error.message);
@@ -168,7 +168,7 @@ export default function QrPoolClient({ initialQrs, shops, demo }) {
       </div>
       {filtered.length === 0 && <p className="mt-8 text-center text-sm text-textSecondary">No QR in this filter.</p>}
       <p className="mt-6 text-xs text-textSecondary/70">
-        NFC: write <code className="rounded bg-white border border-cardBorder px-1">/r/&lt;code&gt;</code> URI on NTAG213 · Print ≥2×2 cm, H-correction, logo ≤22% · All QRs remain valid after you add a custom domain.
+        NFC: write <code className="rounded bg-white border border-cardBorder px-1">/r/&lt;code&gt;</code> URI on NTAG213 · Print ≥2×2 cm · All QRs remain valid after you add a custom domain.
       </p>
     </div>
   );

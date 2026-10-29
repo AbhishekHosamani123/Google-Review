@@ -11,13 +11,12 @@
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.48.1",
-    "jsqr": "^1.4.0",
     "nanoid": "^5.1.5",
     "next": "^15.5.28",
-    "opentype.js": "^2.0.0",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
+    "sharp": "^0.34.5",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
